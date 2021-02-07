@@ -30,7 +30,7 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.3 - Jan 2021';
+my $Version = '0.0.3.6 - Feb 2021';
 
 ####################### GET Paramter #######################  Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
 
@@ -66,6 +66,7 @@ my @MODEL_SN = (0x04, 0x04, 0x00, 0x25);				#### REGISTER_4_READ, MODEL SERIALNU
 ####################### SET Paramter #######################	Das sind die Zahlen die gesendet werden müssen + eine 5. (die Option), damit man etwas bewirken kann.
 
 my @W_BOOST = (0x01, 0x06, 0x15, 0x30);						#### REGISTER_1_WRITE, BOOST ON/OFF
+my @W_BYPASS = (0x01, 0x06, 0x14, 0x63);					#### REGISTER_1_WRITE, BYPASS ON/OFF
 my @W_NIGHTCOOLING = (0x01, 0x06, 0x15, 0x71);				#### REGISTER_1_WRITE, NIGHTCOOLING ON/OFF
 my @W_DISABLE_BOOST_AUTOMATIC = (0x01, 0x06, 0x17, 0x02);	#### REGISTER_1_WRITE, BOOST_AUTOMATIC ON/OFF
 my @W_DISABLE_BYPASS_AUTOMATIC = (0x01, 0x06, 0x17, 0x06);	#### REGISTER_1_WRITE, BYPASS_AUTOMATIC ON/OFF
@@ -192,7 +193,7 @@ sub Get() {
   my ($hash, $name, $cmd, @val ) = @_;
   
   if($cmd eq 'update') {
-	  # update der READINGS!!!				<<<<< Hier kann noch was implementiert werden, evtl. auch nicht...
+	  DoUpdate($hash) if (::DevIo_IsOpen($hash));				##### NEU in Version 0.0.3.1, einfach mal so updaten			
    }
    elsif($cmd eq 'nothing') {
       # Log3 $name, 3, "get $name $cmd";
@@ -239,18 +240,31 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter \n";
 		}
-		setMode($hash, @w_settings);		# hier muss quasi @W_MODE + der Modus gesendet werden also zB (0x01, 0x06, 0x14, 0x12, 0x00);		
+		#setMode($hash, @w_settings);		# hier muss quasi @W_MODE + der Modus gesendet werden also zB (0x01, 0x06, 0x14, 0x12, 0x00);		
+		sendRequest($hash, @w_settings);
 		return undef;
 	}
+	# elsif ($cmd eq 'Lüfterstufe') {
+		# Log3($name, 3, "set $name $cmd $val");
+		# my $myMode = getMode($hash, @MODE);			# Prüfen, ob der Mode auf "Manuell" steht, sonst macht der Rest keinen Sinn.
+		# if ($val <= 10 || $val >= 0 and $myMode eq "Manuell"){
+			# @w_settings = (@W_FAN_STEP, $val);
+			# #setFanSpeed($hash, @w_settings);
+			# sendRequest($hash, @w_settings);
+		# }else{
+			# return "Lüftung ist nicht im manuellen Modus, sondern in: $myMode";
+		# }
+	#}
 	elsif ($cmd eq 'Lüfterstufe') {
 		Log3($name, 3, "set $name $cmd $val");
-		my $myMode = getMode($hash, @MODE);			# Prüfen, ob der Mode auf "Manuell" steht, sonst macht der Rest keinen Sinn.
-		if ($val <= 10 || $val >= 0 and $myMode eq "Manuell"){
-			@w_settings = (@W_BOOST, $val);
-			setFanSpeed($hash, @w_settings);
-		}else{
-			return "Lüftung ist nicht im manuellen Modus, sondern in: $myMode";
+		if ($val <= 10 || $val >= 1){
+			@w_settings = (@W_FAN_STEP, $val);
+			#setFanSpeed($hash, @w_settings);
+			sendRequest($hash, @w_settings);
+		}else{	
+			return "Lüftung ist nicht im manuellen Modus";
 		}
+		return undef;
 	}
     elsif ($cmd eq 'Boost'){
 		Log3($name, 3, "set $name $cmd $val");
@@ -261,8 +275,23 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-			setONOFF($hash, @w_settings);
+		#setONOFF($hash, @w_settings);
+		sendRequest($hash, @w_settings);
+		return undef;
 		}
+	elsif ($cmd eq 'Bypass'){
+		Log3($name, 3, "set $name $cmd $val");
+		if($val eq "on"){
+			@w_settings = (@W_BYPASS, 0x01);
+		}elsif($val eq "off"){
+			@w_settings = (@W_BYPASS, 0x00);
+		}else {
+			die "Fehlerhafter Paramter $val für Setting $cmd\n";
+		}
+			#setONOFF($hash, @w_settings);
+		sendRequest($hash, @w_settings);
+		return undef;
+	}
 	elsif ($cmd eq 'Nachtkühlung'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
@@ -272,9 +301,11 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-		setONOFF($hash, @w_settings);
+		#setONOFF($hash, @w_settings);
+		sendRequest($hash, @w_settings);
+		return undef;
 	}
-	elsif ($cmd eq 'automatischer Boost'){
+	elsif ($cmd eq 'automatischerBoost'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_DISABLE_BOOST_AUTOMATIC, 0x00);
@@ -283,9 +314,11 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-		setOFFON($hash, @w_settings);
+		#setOFFON($hash, @w_settings);
+		sendRequest($hash, @w_settings);
+		return undef;
 	}
-	elsif ($cmd eq 'automatischer Bypass'){
+	elsif ($cmd eq 'automatischerBypass'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_DISABLE_BYPASS_AUTOMATIC, 0x00);
@@ -294,7 +327,9 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-		setOFFON($hash, @w_settings);
+		#setOFFON($hash, @w_settings);
+		sendRequest($hash, @w_settings);
+		return undef;
 	}
 	elsif($cmd eq 'Intervall' && int(@_)==4 ) {
       Log3($name, 3, "set $name $cmd $val");
@@ -304,7 +339,7 @@ sub Set() {
    }
 	
 	my $list = " Modus:Bedarfsmodus,Programm,Manuell,Aus "
-		." Lüfterstufe:slider,0,1,10 "
+		." Lüfterstufe:slider,1,1,10 "
 		." Boost:on,off "
 		." Bypass:on,off "
 		." Nachtkühlung:on,off "
@@ -796,49 +831,62 @@ sub sendRequest(){
 =pod
 =begin html
 
-<a name="Hello"></a>
-<h3>Hello</h3>
+<a name="AirUnit"></a>
+<h3>AirUnit</h3>
 <ul>
-    <i>Hello</i> implements the classical "Hello World" as a starting point for module development. 
-    You may want to copy 98_Hello.pm to start implementing a module of your very own. See 
-    <a href="http://wiki.fhem.de/wiki/DevelopmentModuleIntro">DevelopmentModuleIntro</a> for an 
-    in-depth instruction to your first module.
+    <i>AirUnit</i> implements a FHEM device to control Danfoss AirUnits (a1,a2,w1,w2). Tested only with w2 (Feb 2021). 
+    With this module it is possible to control the most useful functions of your ventilation system.
     <br><br>
-    <a name="Hellodefine"></a>
+    <a name="AirUnitdefine"></a>
     <b>Define</b>
     <ul>
-        <code>define &lt;name&gt; Hello &lt;greet&gt;</code>
-        <br><br>
-        Example: <code>define HELLO Hello TurnUrRadioOn</code>
-        <br><br>
-        The "greet" parameter has no further meaning, it just demonstrates
-        how to set a so called "Internal" value. See <a href="http://fhem.de/commandref.html#define">commandref#define</a> 
-        for more info about the define command.
+		<code>define &lt;name&gt; AirUnit &lt;IP-address[:Port]&gt; [poll-interval]</code><br>
+		If the poll interval is omitted, it is set to 300 (seconds). Smallest possible value is 10.
+		<br>
+		Usually, the port needs not to be defined.
+		<br>
+		Example: <code>define myAirUnit AirUnit 192.168.0.12 600</code>
     </ul>
     <br>
     
-    <a name="Helloset"></a>
+    <a name="AirUnitset"></a>
     <b>Set</b><br>
     <ul>
         <code>set &lt;name&gt; &lt;option&gt; &lt;value&gt;</code>
         <br><br>
-        You can <i>set</i> any value to any of the following options. They're just there to 
-        <i>get</i> them. See <a href="http://fhem.de/commandref.html#set">commandref#set</a> 
-        for more info about the set command.
+        You can <i>set</i> different values to any of the following options. 
         <br><br>
         Options:
         <ul>
-              <li><i>satisfaction</i><br>
-                  Defaults to "no"</li>
-              <li><i>whatyouwant</i><br>
-                  Defaults to "can't"</li>
-              <li><i>whatyouneed</i><br>
-                  Defaults to "try sometimes"</li>
+				<li><i>Modus</i><br>
+                  You can choose between<br>
+						<i>"Bedarfsmodus"</i>, for automatic mode<br>
+						<i>"Programm"</i>, you can define a programm in your AirDail-Controller and choose one.<br>
+						<i>"Manuell"</i>, you can set the steps for the fans manually (only in manual mode). Bypass and Boost are in automatic mode.<br>
+						<i>"Aus"</i>, the system is off for 24 hours, after this time, the system starts in automatic mode with fanstep 1.
+				<li><i>Lüfterstufe</i><br>
+                  You can set the steps for the fans manually. (only in manual mode)</li>
+				<li><i>Boost</i><br>
+                  You can activate/deactive the Boost-Option of your ventilation system. You can configure this mode in your AirDail-Controller, the standard fanstep 10 for 3 hours.<br>
+				  It is useful if you need more Air e.g. in case of cooking or a party with more people.</li>
+				<li><i>Bypass</i><br>
+                  You can activate/deactive the Bypass-Option of you ventilations systems. Its a cooling function, the heat exchanger will be deactivated.<br>
+				  You can configure this mode in your AirDail-Controller, the standard time is 3 hours.<br>
+				  <b>You can´t activte it, if the outdoor temperature is under 5°C.</b></li>
+				<li><i>Nachtkühlung</i><br>
+                  You can activate/deactive the nightcooling option of you ventilations systems. You can configure this in your AirDail-Controller.</li>
+				<li><i>automatischer Boost</i><br>
+                  You can activate/deactive the automatic Boost-Option of you ventilations systems. Its automaticly activated, if the humidity increase very strong, then it runs for 30min.</li>
+				<li><i>automatischer Bypass</i><br>
+                  You can activate/deactive the automatic Bypass-Option of you ventilations systems. Its automaticly activated, if the outdoor temperature and room temperature are higher then the configured values.<br>
+				  You can configure this mode in your AirDail-Controller.</li>
+				<li><i>Intervall</i><br>
+                  You can setup the refresh intervall of your readings.</li>
         </ul>
     </ul>
     <br>
 
-    <a name="Helloget"></a>
+    <a name="AirUniget"></a>
     <b>Get</b><br>
     <ul>
         <code>get &lt;name&gt; &lt;option&gt;</code>
@@ -850,7 +898,7 @@ sub sendRequest(){
     </ul>
     <br>
     
-    <a name="Helloattr"></a>
+    <a name="AirUniattr"></a>
     <b>Attributes</b>
     <ul>
         <code>attr &lt;name&gt; &lt;attribute&gt; &lt;value&gt;</code>
