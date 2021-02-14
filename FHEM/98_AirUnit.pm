@@ -30,7 +30,7 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.3.6 - Feb 2021';
+my $Version = '0.0.3.7 - Feb 2021';
 
 ####################### GET Paramter #######################  Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
 
@@ -53,6 +53,8 @@ my @BOOST_AUTOMATIC = (0x01, 0x04, 0x17, 0x02);			#### REGISTER_1_READ, BOOST_AU
 my @BYPASS = (0x01, 0x04, 0x14, 0x60);					#### REGISTER_1_READ, BYPASS
 my @BYPASS_AUTOMATIC = (0x01, 0x04, 0x17, 0x06);		#### REGISTER_1_READ, BYPASS_AUTOMATIC ON/OFF
 my @NIGHTCOOLING = (0x01, 0x04, 0x15, 0x71);			#### REGISTER_1_READ, NIGHTCOOLING ON/OFF
+my @FIREPLACE = (0x01, 0x04, 0x17, 0x07);				#### REGISTER_1_READ, FIREPLACE ON/OFF
+my @COOKERHOOD = (0x01, 0x04, 0x15, 0x34);				#### REGISTER_1_READ, COOKERHOOD ON/OFF
 
 my @MODE = (0x01, 0x04, 0x14, 0x12);					#### REGISTER_1_READ, MODE
 my @FAN_STEP = (0x01, 0x04, 0x15, 0x61);				#### REGISTER_1_READ, FANSPEED / FANSTUFE in MANUELL - MODE
@@ -72,7 +74,8 @@ my @W_DISABLE_BOOST_AUTOMATIC = (0x01, 0x06, 0x17, 0x02);	#### REGISTER_1_WRITE,
 my @W_DISABLE_BYPASS_AUTOMATIC = (0x01, 0x06, 0x17, 0x06);	#### REGISTER_1_WRITE, BYPASS_AUTOMATIC ON/OFF
 my @W_MODE = (0x01, 0x06, 0x14, 0x12);						#### REGISTER_1_WRITE, MODE
 my @W_FAN_STEP = (0x01, 0x06, 0x15, 0x61);					#### REGISTER_1_WRITE, FAN_STEP
-
+my @W_FIREPLACE = (0x01, 0x06, 0x17, 0x07);					#### REGISTER_1_WRITE, FIREPLACE ON/OFF
+my @W_COOKERHOOD = (0x01, 0x06, 0x15, 0x34);				#### REGISTER_1_WRITE, COOKERHOOD ON/OFF
 
 ########################################
 sub Initialize()
@@ -305,6 +308,32 @@ sub Set() {
 		sendRequest($hash, @w_settings);
 		return undef;
 	}
+	elsif ($cmd eq 'Feuerstätte'){
+		Log3($name, 3, "set $name $cmd $val");
+		if($val eq "on"){
+			@w_settings = (@W_FIREPLACE, 0x01);
+		}elsif($val eq "off"){
+			@w_settings = (@W_FIREPLACE, 0x00);
+		}else {
+			die "Fehlerhafter Paramter $val für Setting $cmd\n";
+		}
+		#setONOFF($hash, @w_settings);
+		sendRequest($hash, @w_settings);
+		return undef;
+	}
+	elsif ($cmd eq 'Dunstabzugshaube'){
+		Log3($name, 3, "set $name $cmd $val");
+		if($val eq "on"){
+			@w_settings = (@W_COOKERHOOD, 0x01);
+		}elsif($val eq "off"){
+			@w_settings = (@W_COOKERHOOD, 0x00);
+		}else {
+			die "Fehlerhafter Paramter $val für Setting $cmd\n";
+		}
+		#setONOFF($hash, @w_settings);
+		sendRequest($hash, @w_settings);
+		return undef;
+	}
 	elsif ($cmd eq 'automatischerBoost'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
@@ -343,6 +372,8 @@ sub Set() {
 		." Boost:on,off "
 		." Bypass:on,off "
 		." Nachtkühlung:on,off "
+		." Feuerstätte:on,off "
+		." Dunstabzugshaube:on,off "
 		." automatischerBoost:on,off "
 		." automatischerBypass:on,off "
 		." Intervall";
