@@ -19,6 +19,7 @@ BEGIN {
 		readingFnAttributes
 		Log3
 		gettimeofday
+		InternalVal
 		InternalTimer
 		RemoveInternalTimer
     ));
@@ -30,7 +31,7 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.3.7 - Feb 2021';
+my $Version = '0.0.3.8 - Feb 2021';
 
 ####################### GET Paramter #######################  Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
 
@@ -117,14 +118,12 @@ sub Define(){
 	if ( $host =~ /(.*):(.*)/ ) {
 		$host = $1;
 		$port = $2;
-		$hash->{fhem}{portDefined} = 1;
-	}
-	else {
-		$hash->{fhem}{portDefined} = 0;
 	}
 	$hash->{INTERVAL} = $interval;
 	$hash->{NOTIFYDEV} = "global";
 	$hash->{DeviceName} = join(':', $host, $port);
+
+  	$hash->{helper}{commandQueue} = [];
 
 	::DevIo_CloseDev($hash) if ( ::DevIo_IsOpen($hash) );
 	::DevIo_OpenDev( $hash, 0, undef, \&Callback );
@@ -157,20 +156,45 @@ sub Read()
 {
   my ($hash) = @_;
   my $name = $hash->{NAME};
-  
+  my %commands;
+
   # read the available data
   my $buf = ::DevIo_SimpleRead($hash);
   
   # stop processing if no data is available (device disconnected)
   return if(!defined($buf));
   
-  Log3($name, 5, "AirUnit ($name) - received: $buf");
-  Log3($name, 5, "AirUnit ($name) - received as hex: ".join(' ', unpack('(H2)*', $buf)));
+  Log3($name, 4, "AirUnit ($name) - received: ".unpack('H*', $buf));
 
   #
   # do something with $buf, e.g. generate readings, send answers via DevIo_SimpleWrite(), ...
   #
-   
+
+  # map commands to actions
+  $commands{getCommandKey(@OUTDOOR_TEMPERATURE)} = sub {
+	readingsSingleUpdate( $hash, "Außenlufttemperatur", getTemperatur($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@ROOM_TEMPERATURE)} = sub {
+	readingsSingleUpdate( $hash, "Raumtemperatur_AirDail", getTemperatur($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@SUPPLY_TEMPERATURE)} = sub {
+	readingsSingleUpdate( $hash, "Zulufttemperatur", getTemperatur($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@EXTRACT_TEMPERATURE)} = sub {
+	readingsSingleUpdate( $hash, "Ablufttemperatur", getTemperatur($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@EXHAUST_TEMPERATURE)} = sub {
+	readingsSingleUpdate( $hash, "Abluft_Temperatur", getTemperatur($hash, $buf), 1);
+  };
+  
+  my $lastCmd = InternalVal($name, 'LastCommand', '');
+  if (defined($commands{$lastCmd})) {
+	$commands{$lastCmd}->();
+  } else {
+  	Log3($name, 4, "AirUnit ($name) - handling of command not defined: $lastCmd");
+  }
+
+  sendNextRequest($hash);
 }
 
 ########################################
@@ -363,7 +387,7 @@ sub Set() {
 	elsif($cmd eq 'Intervall' && int(@_)==4 ) {
       Log3($name, 3, "set $name $cmd $val");
       $val = 10 if( $val < 10 );
-      $hash->{INTERVAL}=$val;
+      $hash->{INTERVAL} = $val;
       return "Intervall wurde auf $val Sekunden gesetzt.";
    }
 	
@@ -431,18 +455,21 @@ sub DoUpdate(){
 
 	my ($hash) = @_;
 	my $name = $hash->{NAME};
-		
+	my $queueRef = $hash->{helper}{commandQueue};
+
+	my $orgQueueCount = @$queueRef;
+
 	# Update readings
 	
 	# readingsBeginUpdate($hash);
  
 	# get_Temperature_Value
 
-	sendRequest($hash, @OUTDOOR_TEMPERATURE);
-	sendRequest($hash, @ROOM_TEMPERATURE);
-	sendRequest($hash, @SUPPLY_TEMPERATURE);
-	sendRequest($hash, @EXTRACT_TEMPERATURE);
-	sendRequest($hash, @EXHAUST_TEMPERATURE);
+	push(@$queueRef, \@OUTDOOR_TEMPERATURE);
+	push(@$queueRef, \@ROOM_TEMPERATURE);
+	push(@$queueRef, \@SUPPLY_TEMPERATURE);
+	push(@$queueRef, \@EXTRACT_TEMPERATURE);
+	push(@$queueRef, \@EXHAUST_TEMPERATURE);
 
 	# my $outdoorTemperature = getTemperatur($hash, @OUTDOOR_TEMPERATURE);
 	# Log3($name, 5, "OUTDOOR_TEMPERATURE after  getTemperatur(): $outdoorTemperature\n"); 
@@ -463,11 +490,11 @@ sub DoUpdate(){
 
 	# get_Value_in_Percent
 
-	sendRequest($hash, @HUMIDITY);
-	sendRequest($hash, @AIR_INPUT);
-	sendRequest($hash, @AIR_OUTPUT);
-	sendRequest($hash, @FAN_SPEED_SUPPLY);
-	sendRequest($hash, @FAN_SPPED_EXTRACT);
+	# sendRequest($hash, @HUMIDITY);
+	# sendRequest($hash, @AIR_INPUT);
+	# sendRequest($hash, @AIR_OUTPUT);
+	# sendRequest($hash, @FAN_SPEED_SUPPLY);
+	# sendRequest($hash, @FAN_SPPED_EXTRACT);
 
 	# my $humidity = getHumidity($hash, @HUMIDITY);
 	# Log3($name, 5, "HUMIDITY after  getHumidity(): $humidity %\n"); 
@@ -486,8 +513,8 @@ sub DoUpdate(){
 	# readingsBulkUpdate( $hash, "Lüftereinstellung Zuluft Stufe", $zufluftStufe);
 	# readingsBulkUpdate( $hash, "Lüftereinstellung Abluft Stufe", $abluftStufe);
 
-	sendRequest($hash, @FILTER_LIFE);
-	sendRequest($hash, @BATTERY_LIFE);
+	# sendRequest($hash, @FILTER_LIFE);
+	# sendRequest($hash, @BATTERY_LIFE);
 
 	# my $filterLifetime = getFilterLifeTime($hash, @FILTER_LIFE);
 	# Log3($name, 5, "FILTERLIFETIME after  getFilterLifeTime(): $filterLifetime %\n");
@@ -499,11 +526,11 @@ sub DoUpdate(){
 
 	# get_ON_or_OFF 
 
-	sendRequest($hash, @BOOST);
-	sendRequest($hash, @BYPASS);
-	sendRequest($hash, @NIGHTCOOLING);
-	sendRequest($hash, @BOOST_AUTOMATIC);
-	sendRequest($hash, @BYPASS_AUTOMATIC);
+	# sendRequest($hash, @BOOST);
+	# sendRequest($hash, @BYPASS);
+	# sendRequest($hash, @NIGHTCOOLING);
+	# sendRequest($hash, @BOOST_AUTOMATIC);
+	# sendRequest($hash, @BYPASS_AUTOMATIC);
 
 	# my $boost = getONOFF($hash, @BOOST);
 	# Log3($name, 5, "BOOST after  getONOFF(): $boost\n"); 
@@ -526,8 +553,8 @@ sub DoUpdate(){
 
 	# get_FanSpeed_in_RPM
 
-	sendRequest($hash, @FANSPEED_IN_RPM);
-	sendRequest($hash, @FANSPEED_OUT_RPM);
+	# sendRequest($hash, @FANSPEED_IN_RPM);
+	# sendRequest($hash, @FANSPEED_OUT_RPM);
 
 	# my $fanspeedInRpmIn = getFanSpeedInRPM($hash, @FANSPEED_IN_RPM);
 	# Log3($name, 5, "FANSPEEDinRPMin after  getFanSpeedInRPM(): $fanspeedInRpmIn\n");
@@ -539,7 +566,7 @@ sub DoUpdate(){
 
 	#get_String
 
-	sendRequest($hash, @MODEL);
+	# sendRequest($hash, @MODEL);
 
 	# my $model = getModel($hash, @MODEL);
 	# Log3($name, 5, "MODELL after  getModel(): $model\n");
@@ -548,9 +575,9 @@ sub DoUpdate(){
 
 	# get_Value
 
-	sendRequest($hash, @MODE);
-	sendRequest($hash, @MODEL_SN);
-	sendRequest($hash, @FAN_STEP);
+	# sendRequest($hash, @MODE);
+	# sendRequest($hash, @MODEL_SN);
+	# sendRequest($hash, @FAN_STEP);
 
 	# my $mode = getMode($hash, @MODE);
 	# Log3($name, 5, "MODE after  getMode(): $mode\n");
@@ -564,6 +591,9 @@ sub DoUpdate(){
 	# readingsBulkUpdate( $hash, "Lüfterstufe", $fanstufe);
 		 
 	# readingsEndUpdate($hash,1);
+
+
+	sendNextRequest($hash) if ($orgQueueCount == 0);
 }
 
 ####################### SET Methoden #######################
@@ -814,16 +844,12 @@ sub getFanSpeed() {
 
 sub getTemperatur() {
 	# read Temperaturen
-	my ($hash,@r_setting) = @_;
+	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getTemperatur(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getTemperatur(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,2));
-	Log3($name, 5, "recvunpackData in getTemperatur(): $tempresponse2\n");
-	my $temperature = hex(unpack("H*" , substr($tempresponse,0,2)));	
+	my $tempresponse = unpack("H*" , substr($data,0,2));
+	Log3($name, 5, "recvunpackData in getTemperatur(): $tempresponse\n");
+	my $temperature = hex($tempresponse);	
 	return sprintf ('%.02f', $temperature/100);
 }
 
@@ -842,19 +868,31 @@ sub getHumidity() {
 	return sprintf ('%.02f', $humidity);
 }
 
+sub getCommandKey() {
+	my (@command) = @_;
+	return unpack('H*', pack('C*' x @command, @command));
+}
 
 ####################### SEND Request #######################
 # VERBINDUNGSAUFBAU ZUR ANLAGE... 
 # $sendData soll immer der Übergabeparameter aus setXXX oder getXXX sein mit 5 oder 4 Zahlen.
 
-sub sendRequest(){
-	my ($hash,@sendData) = @_;
+sub sendNextRequest(){
+	my ($hash) = @_;
 	my $name = $hash->{NAME};
+	my $queueRef = $hash->{helper}{commandQueue};
 
-	my $data = pack("C*" x @sendData, @sendData);
+	# queue is empty - nothing to do
+	return if (!@$queueRef);
 
-	Log3($name, 5, "sendData in sendRequest(): ".join(',', map(sprintf("0x%02x", $_), @sendData)));
+	my @nextCmd = @{ shift(@$queueRef) };
+	my $data = pack('C*' x @nextCmd, @nextCmd);
+	my $unpackedData = unpack('H*', $data);
+
+	Log3($name, 4, "sendData in sendRequest(): $unpackedData");
     ::DevIo_SimpleWrite( $hash, $data, 0 );
+
+	$hash->{LastCommand} = $unpackedData;
 }
 
 1;
