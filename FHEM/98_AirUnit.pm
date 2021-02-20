@@ -31,9 +31,11 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.3.8 - Feb 2021';
+my $Version = '0.0.4.0 - Feb 2021';
 
-####################### GET Paramter #######################  Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
+####################### GET Paramter ################################################  
+# Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
+#####################################################################################
 
 my @OUTDOOR_TEMPERATURE = (0x01, 0x04, 0x03, 0x34);		#### REGISTER_1_READ, OUTDOOR_TEMPERATURE
 my @ROOM_TEMPERATURE = (0x01, 0x04, 0x03, 0x00);		#### REGISTER_1_READ, ROOM_TEMPERATURE
@@ -55,7 +57,7 @@ my @BYPASS = (0x01, 0x04, 0x14, 0x60);					#### REGISTER_1_READ, BYPASS
 my @BYPASS_AUTOMATIC = (0x01, 0x04, 0x17, 0x06);		#### REGISTER_1_READ, BYPASS_AUTOMATIC ON/OFF
 my @NIGHTCOOLING = (0x01, 0x04, 0x15, 0x71);			#### REGISTER_1_READ, NIGHTCOOLING ON/OFF
 my @FIREPLACE = (0x01, 0x04, 0x17, 0x07);				#### REGISTER_1_READ, FIREPLACE ON/OFF
-my @COOKERHOOD = (0x01, 0x04, 0x15, 0x34);				#### REGISTER_1_READ, COOKERHOOD ON/OFF
+#my @COOKERHOOD = (0x01, 0x04, 0x15, 0x34);				#### REGISTER_1_READ, COOKERHOOD ON/OFF
 
 my @MODE = (0x01, 0x04, 0x14, 0x12);					#### REGISTER_1_READ, MODE
 my @FAN_STEP = (0x01, 0x04, 0x15, 0x61);				#### REGISTER_1_READ, FANSPEED / FANSTUFE in MANUELL - MODE
@@ -66,7 +68,9 @@ my @FANSPEED_OUT_RPM = (0x04, 0x04, 0x14, 0x51);		#### REGISTER_1_READ, FANSPEED
 my @MODEL = (0x01, 0x04, 0x15, 0xe5);					#### REGISTER_1_READ, MODEL
 my @MODEL_SN = (0x04, 0x04, 0x00, 0x25);				#### REGISTER_4_READ, MODEL SERIALNUMBER
 
-####################### SET Paramter #######################	Das sind die Zahlen die gesendet werden müssen + eine 5. (die Option), damit man etwas bewirken kann.
+####################### SET Paramter ##################################################################
+# Das sind die Zahlen die gesendet werden müssen + eine 5. (die Option), damit man etwas bewirken kann.
+#######################################################################################################
 
 my @W_BOOST = (0x01, 0x06, 0x15, 0x30);						#### REGISTER_1_WRITE, BOOST ON/OFF
 my @W_BYPASS = (0x01, 0x06, 0x14, 0x63);					#### REGISTER_1_WRITE, BYPASS ON/OFF
@@ -76,9 +80,10 @@ my @W_DISABLE_BYPASS_AUTOMATIC = (0x01, 0x06, 0x17, 0x06);	#### REGISTER_1_WRITE
 my @W_MODE = (0x01, 0x06, 0x14, 0x12);						#### REGISTER_1_WRITE, MODE
 my @W_FAN_STEP = (0x01, 0x06, 0x15, 0x61);					#### REGISTER_1_WRITE, FAN_STEP
 my @W_FIREPLACE = (0x01, 0x06, 0x17, 0x07);					#### REGISTER_1_WRITE, FIREPLACE ON/OFF
-my @W_COOKERHOOD = (0x01, 0x06, 0x15, 0x34);				#### REGISTER_1_WRITE, COOKERHOOD ON/OFF
+#my @W_COOKERHOOD = (0x01, 0x06, 0x15, 0x34);				#### REGISTER_1_WRITE, COOKERHOOD ON/OFF
 
 ########################################
+
 sub Initialize()
 {
   my ($hash) = @_;
@@ -96,6 +101,7 @@ sub Initialize()
 }
 
 ########################################
+
 sub Define(){
 	my ($hash, $def) = @_;
 	my @a = split("[ \t][ \t]*", $def);
@@ -109,7 +115,7 @@ sub Define(){
 
 	my $interval = 5*60;
 	$interval = $a[3] if(int(@a) == 4);
-	$interval = 10 if( $interval < 10 );
+	$interval = 30 if( $interval < 30 );
 
 	$hash->{NAME} = $name;
 	$hash->{ModuleVersion} = $Version;
@@ -132,6 +138,7 @@ sub Define(){
 }
 
 ########################################
+
 sub Undefine() {
 	
 	my ($hash, $arg) = @_;
@@ -142,6 +149,7 @@ sub Undefine() {
 
 ########################################
 # called repeatedly if device disappeared
+
 sub Ready()
 {
   my ($hash) = @_;
@@ -152,6 +160,7 @@ sub Ready()
 
 ########################################
 # called when data was received
+
 sub Read()
 {
   my ($hash) = @_;
@@ -172,22 +181,79 @@ sub Read()
 
   # map commands to actions
   $commands{getCommandKey(@OUTDOOR_TEMPERATURE)} = sub {
-	readingsSingleUpdate( $hash, "Außenlufttemperatur", getTemperatur($hash, $buf), 1);
+	readingsSingleUpdate( $hash, "Aussenluft_Temperatur", getTemperatur($hash, $buf), 1);
   };
   $commands{getCommandKey(@ROOM_TEMPERATURE)} = sub {
-	readingsSingleUpdate( $hash, "Raumtemperatur_AirDail", getTemperatur($hash, $buf), 1);
+	readingsSingleUpdate( $hash, "Raumluft_Temperatur_AirDail", getTemperatur($hash, $buf), 1);
   };
   $commands{getCommandKey(@SUPPLY_TEMPERATURE)} = sub {
-	readingsSingleUpdate( $hash, "Zulufttemperatur", getTemperatur($hash, $buf), 1);
+	readingsSingleUpdate( $hash, "Zuluft_Temperatur", getTemperatur($hash, $buf), 1);
   };
   $commands{getCommandKey(@EXTRACT_TEMPERATURE)} = sub {
-	readingsSingleUpdate( $hash, "Ablufttemperatur", getTemperatur($hash, $buf), 1);
-  };
-  $commands{getCommandKey(@EXHAUST_TEMPERATURE)} = sub {
 	readingsSingleUpdate( $hash, "Abluft_Temperatur", getTemperatur($hash, $buf), 1);
   };
-  
+  $commands{getCommandKey(@EXHAUST_TEMPERATURE)} = sub {
+	readingsSingleUpdate( $hash, "Fortluft_Temperatur", getTemperatur($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@HUMIDITY)} = sub {
+	readingsSingleUpdate( $hash, "Luftfeuchtigkeit", getHumidity($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@AIR_INPUT)} = sub {
+	readingsSingleUpdate( $hash, "Zuluft_Grundstufe_Einstellung", getAirInputOutput($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@AIR_OUTPUT)} = sub {
+	readingsSingleUpdate( $hash, "Abluft_Grundstufe_Einstellung", getAirInputOutput($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@FAN_SPEED_SUPPLY)} = sub {
+	readingsSingleUpdate( $hash, "Zuluft_Stufe", getAirInputOutput($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@FAN_SPPED_EXTRACT)} = sub {
+	readingsSingleUpdate( $hash, "Abluft_Stufe", getAirInputOutput($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@FILTER_LIFE)} = sub {
+	readingsSingleUpdate( $hash, "verbl.Filterlebensdauer", getFilterLifeTime($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@BATTERY_LIFE)} = sub {
+	readingsSingleUpdate( $hash, "verbl.Batterielebensdauer_AirDial", getBatteryLifeTime($hash, $buf), 1);
+  };
+  $commands{getCommandKey(@BOOST)} = sub {
+	readingsSingleUpdate( $hash, "Stosslueftung", getONOFF($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@BYPASS)} = sub {
+	readingsSingleUpdate( $hash, "Bypass", getONOFF($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@NIGHTCOOLING)} = sub {
+	readingsSingleUpdate( $hash, "Stosslueftung", getONOFF($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@FIREPLACE)} = sub {
+	readingsSingleUpdate( $hash, "Bypass", getONOFF($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@BOOST_AUTOMATIC)} = sub {
+	readingsSingleUpdate( $hash, "automatische_Stosslueftung", getOFFON($hash, $buf), 1);
+  }; 
+   $commands{getCommandKey(@BYPASS_AUTOMATIC)} = sub {
+	readingsSingleUpdate( $hash, "automatischer_Bypass", getOFFON($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@FANSPEED_IN_RPM)} = sub {
+	readingsSingleUpdate( $hash, "Zuluft_Luefterdrehzahl", getFanSpeedInRPM($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@FANSPEED_OUT_RPM)} = sub {
+	readingsSingleUpdate( $hash, "Abluft_Luefterdrehzahl", getFanSpeedInRPM($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@MODEL)} = sub {
+	readingsSingleUpdate( $hash, "Model", getModel($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@MODEL_SN)} = sub {
+	readingsSingleUpdate( $hash, "Seriennummer", getModelSN($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@MODE)} = sub {
+	readingsSingleUpdate( $hash, "Modus", getMode($hash, $buf), 1);
+  };
+   $commands{getCommandKey(@FAN_STEP)} = sub {
+	readingsSingleUpdate( $hash, "Luefterstufe", getFanSpeed($hash, $buf), 1);
+  };  
   my $lastCmd = InternalVal($name, 'LastCommand', '');
+  
   if (defined($commands{$lastCmd})) {
 	$commands{$lastCmd}->();
   } else {
@@ -197,8 +263,10 @@ sub Read()
   sendNextRequest($hash);
 }
 
-########################################
+##########################################################################
 # will be executed if connection establishment fails (see DevIo_OpenDev())
+##########################################################################
+
 sub Callback()
 {
     my ($hash, $error) = @_;
@@ -212,15 +280,14 @@ sub Callback()
     return undef;
 }
 
-######################################## todo
-# Bei Get müssen immer nur 4 Zahlen gesendet werden
+########################################
 
 sub Get() {
 	
   my ($hash, $name, $cmd, @val ) = @_;
   
   if($cmd eq 'update') {
-	  DoUpdate($hash) if (::DevIo_IsOpen($hash));				##### NEU in Version 0.0.3.1, einfach mal so updaten			
+	  DoUpdate($hash) if (::DevIo_IsOpen($hash));			
    }
    elsif($cmd eq 'nothing') {
       # Log3 $name, 3, "get $name $cmd";
@@ -230,7 +297,7 @@ sub Get() {
          return $msg;
       }
    }
-   elsif( $cmd eq 'rawData') {
+   elsif( $cmd eq 'get_Overview') {
 	  # Log3 $name, 3, "get $name $cmd";
       if (int @val !=4000 ) {
          my $msg = "Wrong number of parameter (".int @val.")in get $name $cmd";
@@ -241,13 +308,12 @@ sub Get() {
 
    my $list = " update:noArg"
 			. " nothing"
-			. " rawData";
+			. " get_Overview:noArg";
        
    return "Unknown argument $cmd, choose one of $list";
 }
 
-######################################## todo
-# Bei Set müssen immer 5 Zahlen gesendet werden
+########################################
 
 sub Set() {
 
@@ -267,29 +333,18 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter \n";
 		}
-		#setMode($hash, @w_settings);		# hier muss quasi @W_MODE + der Modus gesendet werden also zB (0x01, 0x06, 0x14, 0x12, 0x00);		
 		sendRequest($hash, @w_settings);
 		return undef;
 	}
-	# elsif ($cmd eq 'Lüfterstufe') {
-		# Log3($name, 3, "set $name $cmd $val");
-		# my $myMode = getMode($hash, @MODE);			# Prüfen, ob der Mode auf "Manuell" steht, sonst macht der Rest keinen Sinn.
-		# if ($val <= 10 || $val >= 0 and $myMode eq "Manuell"){
-			# @w_settings = (@W_FAN_STEP, $val);
-			# #setFanSpeed($hash, @w_settings);
-			# sendRequest($hash, @w_settings);
-		# }else{
-			# return "Lüftung ist nicht im manuellen Modus, sondern in: $myMode";
-		# }
-	#}
-	elsif ($cmd eq 'Lüfterstufe') {
+	elsif ($cmd eq 'Luefterstufe') {
 		Log3($name, 3, "set $name $cmd $val");
+#		my $myMode = ReadingsVal($name, "Modus" , "");
+#		if (($val <= 10 || $val >= 1) and $myMode eq "Manuell"){
 		if ($val <= 10 || $val >= 1){
 			@w_settings = (@W_FAN_STEP, $val);
-			#setFanSpeed($hash, @w_settings);
 			sendRequest($hash, @w_settings);
 		}else{	
-			return "Lüftung ist nicht im manuellen Modus";
+			return "Lueftung ist nicht im manuellen Modus.";
 		}
 		return undef;
 	}
@@ -302,7 +357,6 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-		#setONOFF($hash, @w_settings);
 		sendRequest($hash, @w_settings);
 		return undef;
 		}
@@ -315,11 +369,10 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-			#setONOFF($hash, @w_settings);
 		sendRequest($hash, @w_settings);
 		return undef;
 	}
-	elsif ($cmd eq 'Nachtkühlung'){
+	elsif ($cmd eq 'Nachtkuehlung'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_NIGHTCOOLING, 0x01);
@@ -328,11 +381,10 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-		#setONOFF($hash, @w_settings);
 		sendRequest($hash, @w_settings);
 		return undef;
 	}
-	elsif ($cmd eq 'Feuerstätte'){
+	elsif ($cmd eq 'Feuerstaette'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_FIREPLACE, 0x01);
@@ -341,23 +393,22 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-		#setONOFF($hash, @w_settings);
 		sendRequest($hash, @w_settings);
 		return undef;
 	}
-	elsif ($cmd eq 'Dunstabzugshaube'){
-		Log3($name, 3, "set $name $cmd $val");
-		if($val eq "on"){
-			@w_settings = (@W_COOKERHOOD, 0x01);
-		}elsif($val eq "off"){
-			@w_settings = (@W_COOKERHOOD, 0x00);
-		}else {
-			die "Fehlerhafter Paramter $val für Setting $cmd\n";
-		}
-		#setONOFF($hash, @w_settings);
-		sendRequest($hash, @w_settings);
-		return undef;
-	}
+	# elsif ($cmd eq 'Dunstabzugshaube'){
+		# Log3($name, 3, "set $name $cmd $val");
+		# if($val eq "on"){
+			# @w_settings = (@W_COOKERHOOD, 0x01);
+		# }elsif($val eq "off"){
+			# @w_settings = (@W_COOKERHOOD, 0x00);
+		# }else {
+			# die "Fehlerhafter Paramter $val für Setting $cmd\n";
+		# }
+		# #setONOFF($hash, @w_settings);
+		# sendRequest($hash, @w_settings);
+		# return undef;
+	# }
 	elsif ($cmd eq 'automatischerBoost'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
@@ -367,7 +418,6 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-		#setOFFON($hash, @w_settings);
 		sendRequest($hash, @w_settings);
 		return undef;
 	}
@@ -380,24 +430,23 @@ sub Set() {
 		}else {
 			die "Fehlerhafter Paramter $val für Setting $cmd\n";
 		}
-		#setOFFON($hash, @w_settings);
 		sendRequest($hash, @w_settings);
 		return undef;
 	}
 	elsif($cmd eq 'Intervall' && int(@_)==4 ) {
       Log3($name, 3, "set $name $cmd $val");
-      $val = 10 if( $val < 10 );
+      $val = 30 if( $val < 30 );
       $hash->{INTERVAL} = $val;
       return "Intervall wurde auf $val Sekunden gesetzt.";
    }
 	
 	my $list = " Modus:Bedarfsmodus,Programm,Manuell,Aus "
-		." Lüfterstufe:slider,1,1,10 "
+		." Luefterstufe:slider,1,1,10 "
 		." Boost:on,off "
 		." Bypass:on,off "
-		." Nachtkühlung:on,off "
-		." Feuerstätte:on,off "
-		." Dunstabzugshaube:on,off "
+		." Nachtkuehlung:on,off "
+		." Feuerstaette:on,off "
+#		." Dunstabzugshaube:on,off "
 		." automatischerBoost:on,off "
 		." automatischerBypass:on,off "
 		." Intervall";
@@ -408,6 +457,7 @@ sub Set() {
 ######################################## 	
 # hier ist noch die Frage was man an Attributen setzen könnte... zB on-for-timer für die erweiterten Settings wäre gut
 # viell kann man dann sagen on-for-timer BOOST Modus (wobei der Boost Modus in der Anlage eine über einen externen Controller setztbaren Timer hat)
+
 sub Attr() {
 	
 	   my ($cmd,$name,$aName,$aVal) = @_;
@@ -428,10 +478,6 @@ sub Attr() {
 }
 
 ########################################
-# Diese GetUpdate Methode läuft jetzt nach dem ersten Aufruf im Define intervallbasiert und ruft dabei sich selber immer wieder auf und setzt den Timer neu
-# DoUpdate sollte dann wohl die Readings setzen... UpdateAborted etwas bei Fehlerhaften Aufruf machen
-# 
-# mit unless(exists($hash->{helper}{RUNNING_PID}) wird geprüft ob es noch eine laufenden BlockingCall gib.
 
 sub GetUpdate() {
 	my ($hash) = @_;
@@ -443,12 +489,7 @@ sub GetUpdate() {
 
 	DoUpdate($hash) if (::DevIo_IsOpen($hash));
 }
-########################################
-#jetzt ist vieles nur c+p
-########################################
 
-########################################
-# habe bei DoUpdate die Readings füllen wollen
 ########################################
 
 sub DoUpdate(){
@@ -460,8 +501,6 @@ sub DoUpdate(){
 	my $orgQueueCount = @$queueRef;
 
 	# Update readings
-	
-	# readingsBeginUpdate($hash);
  
 	# get_Temperature_Value
 
@@ -471,134 +510,50 @@ sub DoUpdate(){
 	push(@$queueRef, \@EXTRACT_TEMPERATURE);
 	push(@$queueRef, \@EXHAUST_TEMPERATURE);
 
-	# my $outdoorTemperature = getTemperatur($hash, @OUTDOOR_TEMPERATURE);
-	# Log3($name, 5, "OUTDOOR_TEMPERATURE after  getTemperatur(): $outdoorTemperature\n"); 
-	# my $roomTemperature = getTemperatur($hash, @ROOM_TEMPERATURE);
-	# Log3($name, 5, "ROOM_TEMPERATURE from AirDail after  getTemperatur(): $roomTemperature\n"); 
-	# my $supplyTemperature = getTemperatur($hash, @SUPPLY_TEMPERATURE);
-	# Log3($name, 5, "SUPPLY_TEMPERATURE after  getTemperatur(): $supplyTemperature\n"); 
-	# my $extractTemperature = getTemperatur($hash, @EXTRACT_TEMPERATURE);
-	# Log3($name, 5, "EXTRACT_TEMPERATURE  getTemperatur(): $extractTemperature\n"); 
-	# my $exhaustTemperature = getTemperatur($hash, @EXHAUST_TEMPERATURE);
-	# Log3($name, 5, "EXHAUST_TEMPERATURE after  getTemperatur(): $exhaustTemperature\n"); 
-
-	# readingsBulkUpdate( $hash, "Außenlufttemperatur", $outdoorTemperature);
-	# readingsBulkUpdate( $hash, "Raumtemperatur AirDail", $roomTemperature);
-	# readingsBulkUpdate( $hash, "Zulufttemperatur", $supplyTemperature);
-	# readingsBulkUpdate( $hash, "Ablufttemperatur", $extractTemperature);
-	# readingsBulkUpdate( $hash, "Abluft Temperatur", $exhaustTemperature);
-
 	# get_Value_in_Percent
 
-	# sendRequest($hash, @HUMIDITY);
-	# sendRequest($hash, @AIR_INPUT);
-	# sendRequest($hash, @AIR_OUTPUT);
-	# sendRequest($hash, @FAN_SPEED_SUPPLY);
-	# sendRequest($hash, @FAN_SPPED_EXTRACT);
+	push(@$queueRef, \@HUMIDITY);
+	push(@$queueRef, \@AIR_INPUT);
+	push(@$queueRef, \@AIR_OUTPUT);
+	push(@$queueRef, \@FAN_SPEED_SUPPLY);
+	push(@$queueRef, \@FAN_SPPED_EXTRACT);
 
-	# my $humidity = getHumidity($hash, @HUMIDITY);
-	# Log3($name, 5, "HUMIDITY after  getHumidity(): $humidity %\n"); 
-	# my $input = getAirInputOutput($hash, @AIR_INPUT);
-	# Log3($name, 5, "INPUT after  getAirInputOutput(): $input %\n");
-	# my $output = getAirInputOutput($hash, @AIR_OUTPUT);
-	# Log3($name, 5, "OUTPUT after  getAirInputOutput(): $output %\n");
-	# my $zufluftStufe = getAirInputOutput($hash, @FAN_SPEED_SUPPLY);
-	# Log3($name, 5, "ZUFLUFT_STUFE after  getAirInputOutput(): $zufluftStufe %\n");
-	# my $abluftStufe = getAirInputOutput($hash, @FAN_SPPED_EXTRACT);
-	# Log3($name, 5, "ABLUFT_STUFE after  getAirInputOutput(): $abluftStufe %\n");
+	# get_Lifetimes_in_Percent
 
-	# readingsBulkUpdate( $hash, "Luftfeuchtigkeit", $humidity);
-	# readingsBulkUpdate( $hash, "Lüftereinstellung Zuluft Grundstufe", $input);
-	# readingsBulkUpdate( $hash, "Lüftereinstellung Abluft Grundstufe", $output);
-	# readingsBulkUpdate( $hash, "Lüftereinstellung Zuluft Stufe", $zufluftStufe);
-	# readingsBulkUpdate( $hash, "Lüftereinstellung Abluft Stufe", $abluftStufe);
+	push(@$queueRef, \@FILTER_LIFE);
+	push(@$queueRef, \@BATTERY_LIFE);
 
-	# sendRequest($hash, @FILTER_LIFE);
-	# sendRequest($hash, @BATTERY_LIFE);
+	# get_ON_or_OFF_Value
 
-	# my $filterLifetime = getFilterLifeTime($hash, @FILTER_LIFE);
-	# Log3($name, 5, "FILTERLIFETIME after  getFilterLifeTime(): $filterLifetime %\n");
-	# my $batteryLifetime = getBatteryLifeTime($hash, @BATTERY_LIFE);			 
-	# Log3($name, 5, "BATTERYLIFETIME after  getBatteryLifeTime(): $batteryLifetime %\n");
-
-	# readingsBulkUpdate( $hash, "Lebensdauer Filter im Gerät", $filterLifetime);
-	# readingsBulkUpdate( $hash, "Lebensdauer Batterie in AirDail", $batteryLifetime);
-
-	# get_ON_or_OFF 
-
-	# sendRequest($hash, @BOOST);
-	# sendRequest($hash, @BYPASS);
-	# sendRequest($hash, @NIGHTCOOLING);
-	# sendRequest($hash, @BOOST_AUTOMATIC);
-	# sendRequest($hash, @BYPASS_AUTOMATIC);
-
-	# my $boost = getONOFF($hash, @BOOST);
-	# Log3($name, 5, "BOOST after  getONOFF(): $boost\n"); 
-	# my $bypass = getONOFF($hash, @BYPASS);
-	# Log3($name, 5, "BYPASS after  getONOFF(): $bypass\n"); 
-	# my $nightcooling = getONOFF($hash, @NIGHTCOOLING);
-	# Log3($name, 5, "NIGHTCOOLING after  getONOFF(): $nightcooling\n");
-	# #invert
-	# my $boostAutomatic = getOFFON($hash, @BOOST_AUTOMATIC);
-	# Log3($name, 5, "BOOST_AUTOMATIC after  getOFFON(): $boostAutomatic\n");
-	# #invert
-	# my $bypassAutomatic = getOFFON($hash, @BYPASS_AUTOMATIC);
-	# Log3($name, 5, "BYPASS_AUTOMATIC after  getOFFON(): $bypassAutomatic\n");
-
-	# readingsBulkUpdate( $hash, "Boost", $boost);
-	# readingsBulkUpdate( $hash, "Bypass", $bypass);
-	# readingsBulkUpdate( $hash, "Nachtkühlung", $nightcooling);
-	# readingsBulkUpdate( $hash, "automatischer Boost", $boostAutomatic);
-	# readingsBulkUpdate( $hash, "automatischer Bypass", $bypassAutomatic);
+	push(@$queueRef, \@BOOST);
+	push(@$queueRef, \@BYPASS);
+	push(@$queueRef, \@NIGHTCOOLING);
+	push(@$queueRef, \@FIREPLACE);
+	push(@$queueRef, \@BOOST_AUTOMATIC);
+	push(@$queueRef, \@BYPASS_AUTOMATIC);
 
 	# get_FanSpeed_in_RPM
 
-	# sendRequest($hash, @FANSPEED_IN_RPM);
-	# sendRequest($hash, @FANSPEED_OUT_RPM);
-
-	# my $fanspeedInRpmIn = getFanSpeedInRPM($hash, @FANSPEED_IN_RPM);
-	# Log3($name, 5, "FANSPEEDinRPMin after  getFanSpeedInRPM(): $fanspeedInRpmIn\n");
-	# my $fanspeedInRpmOut = getFanSpeedInRPM($hash, @FANSPEED_OUT_RPM );
-	# Log3($name, 5, "FANSPEEDinRPMout after  getFanSpeedInRPM(): $fanspeedInRpmOut\n");
-
-	# readingsBulkUpdate( $hash, "FANSPEEDinRPMin", $fanspeedInRpmIn);
-	# readingsBulkUpdate( $hash, "FANSPEEDinRPMout", $fanspeedInRpmOut);
+	push(@$queueRef, \@FANSPEED_IN_RPM);
+	push(@$queueRef, \@FANSPEED_OUT_RPM);
 
 	#get_String
 
-	# sendRequest($hash, @MODEL);
-
-	# my $model = getModel($hash, @MODEL);
-	# Log3($name, 5, "MODELL after  getModel(): $model\n");
-
-	# readingsBulkUpdate( $hash, "model", $model);
+	push(@$queueRef, \@MODEL);
+	push(@$queueRef, \@MODEL_SN);
 
 	# get_Value
 
-	# sendRequest($hash, @MODE);
-	# sendRequest($hash, @MODEL_SN);
-	# sendRequest($hash, @FAN_STEP);
-
-	# my $mode = getMode($hash, @MODE);
-	# Log3($name, 5, "MODE after  getMode(): $mode\n");
-	# my $modelSn = getModelSN($hash, @MODEL_SN);
-	# Log3($name, 5, "MODEL_SN after  getModelSN(): $modelSn\n");
-	# my $fanstufe = getFanSpeed($hash, @FAN_STEP);
-	# Log3($name, 5, "FANSTUFE after  getFanSpeed() Stufe: $fanstufe\n");
-
-	# readingsBulkUpdate( $hash, "Modus", $mode);
-	# readingsBulkUpdate( $hash, "Seriennummer", $modelSn);
-	# readingsBulkUpdate( $hash, "Lüfterstufe", $fanstufe);
-		 
-	# readingsEndUpdate($hash,1);
-
+	push(@$queueRef, \@MODE);
+	push(@$queueRef, \@MODEL_SN);
+	push(@$queueRef, \@FAN_STEP);
 
 	sendNextRequest($hash) if ($orgQueueCount == 0);
 }
 
-####################### SET Methoden #######################
-# Welche Übergabeparameter bekommen die SETs??? 
-
+########################################
+############# SET Methoden #############
+########################################
 
 sub setFanSpeed() {
 	# write Lüftergeschwindigskeitsstufe von 1-10
@@ -665,44 +620,74 @@ sub setMode() {
 }
 
 
-####################### GET Methoden #######################
-# Welche Übergabeparameter bekommen die GETs??? 
+########################################
+############# GET Methoden #############
+########################################
 
-sub getOFFON() {
-	# read true/1/OFF or false/0/ON for DISABLE_BOOST_AUTOMATIC, DISABLE_BOOST_AUTOMATIC
-	my ($hash,@r_setting) = @_;
+sub getTemperatur() {
+	# read Temperaturen in Grad
+	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getOFFON(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getOFFON(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,1));
-	Log3($name, 5, "recvunpackData in getOFFON(): $tempresponse2\n");
-	my $onoff = hex(unpack("H*" , substr($tempresponse,0,1)));
-	print  "recvunpackhexData in getOFFON(): $onoff\n";
-	if($onoff == 0){
-		return "An"
-	}elsif($onoff == 1){
-		return "Aus"
-	}else {
-		die "Unbekannter Paramter $onoff\n";
-	}
+	my $tempresponse = unpack("H*" , substr($data,0,2));
+	Log3($name, 5, "recvunpackData in getTemperatur(): $tempresponse\n");
+	my $temperature = hex($tempresponse);	
+	return sprintf ('%.02f', $temperature/100);
+}
+
+sub getHumidity() {
+	# read Luftfeuchtigkeit in Prozent
+	my ($hash,$data) = @_;
+	my $name = $hash->{NAME};
+
+	my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getHumidity(): $tempresponse\n");
+	my $humidity = hex($tempresponse) * 100 / 255;	
+	return sprintf ('%.02f', $humidity);
+}
+
+sub getAirInputOutput() {
+	# read in AIR_INPUT / AIR_OUTPUT und FAN_SPEED_SUPPLY / FAN_SPPED_EXTRACT in Prozent
+	my ($hash,$data) = @_;
+	my $name = $hash->{NAME};
+
+	my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getAirInputOutput(): $tempresponse\n");
+	my $inputoutput = hex($tempresponse);	
+	return $inputoutput;
+}
+
+sub getBatteryLifeTime() {
+	# read verbleibende Lebensdauer der Batterien im AirDail-Controller
+	my ($hash,$data) = @_;
+	my $name = $hash->{NAME};
+
+	my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getBatteryLifeTime(): $tempresponse\n");
+	my $batterylifetime = hex($tempresponse);	
+	return sprintf ('%.02f', $batterylifetime);
+}
+
+sub getFilterLifeTime() {
+	# read verbleibende Lebensdauer der Filter in Prozent
+	my ($hash,$data) = @_;
+	my $name = $hash->{NAME};
+
+	my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getFilterLifeTime(): $tempresponse\n");
+	my $filterlifetime = hex($tempresponse) * 100 / 255;	
+	return sprintf ('%.02f', $filterlifetime);
 }
 
 sub getONOFF() {
-	# read true/1/ON or false/0/OFF for BOOST, BYPASS, NIGHTCOOLING
-	my ($hash,@r_setting) = @_;
+	# read true/1/ON or false/0/OFF for BOOST, BYPASS, NIGHTCOOLING, FIREPLACE
+	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getONOFF(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getONOFF(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,1));
-	Log3($name, 5, "recvunpackData in getONOFF(): $tempresponse2\n");
-	my $onoff = hex(unpack("H*" , substr($tempresponse,0,1)));
-	print  "recvunpackhexData in getONOFF(): $onoff\n";
+	my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getONOFF(): $tempresponse\n");
+	my $onoff = hex($tempresponse);
+	Log3($name, 5, "recvunpackhexData in getONOFF(): $onoff\n");
 	if($onoff == 1){
 		return "An"
 	}elsif($onoff == 0){
@@ -712,78 +697,64 @@ sub getONOFF() {
 	}
 }
 
-sub getModelSN() {
-	# read Seriennummer
-	my ($hash,@r_setting) = @_;
+sub getOFFON() {
+	# read true/1/OFF or false/0/ON for DISABLE_BOOST_AUTOMATIC, DISABLE_BOOST_AUTOMATIC
+	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getModelSN(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getModelSN(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,2));
-	Log3($name, 5, "recvunpackData in getModelSN(): $tempresponse2\n");
-	my $modelsn = hex(unpack("H*" , substr($tempresponse,0,2)));	
-	return $modelsn;
+	my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getOFFON(): $tempresponse\n");
+	my $onoff = hex($tempresponse);
+	Log3($name, 5, "recvunpackhexData in getOFFON(): $onoff\n");
+	if($onoff == 0){
+		return "An"
+	}elsif($onoff == 1){
+		return "Aus"
+	}else {
+		die "Unbekannter Paramter $onoff\n";
+	}
 }
 
 sub getFanSpeedInRPM() {
-	# read Lüftergeschwindigkeit Input / Output  in U/min
-	my ($hash,@r_setting) = @_;
+	# read aktuelle Lüftergeschwindigkeit in U/min
+	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getFanSpeedInRPM(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getFanSpeedInRPM(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,2));
-	Log3($name, 5, "recvunpackData in getFanSpeedInRPM(): $tempresponse2\n");
-	my $fanspeedinrpm = hex(unpack("H*", substr($tempresponse,0,2)));	
+	my $tempresponse = unpack("H*" , substr($data,0,2));
+	Log3($name, 5, "recvunpackData in getFanSpeedInRPM(): $tempresponse\n");
+	my $fanspeedinrpm = hex($tempresponse);	
 	return $fanspeedinrpm;
 }
 
-sub getAirInputOutput() {
-	# read in Air Input / Output  in Prozent
-	my ($hash,@r_setting) = @_;
+sub getFanSpeed() {
+	# read aktuelle Lüftergeschwindigkeit in Stufen von 1-10
+	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getAirInputOutput(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getAirInputOutput(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,1));
-	Log3($name, 5, "recvunpackData in getAirInputOutput(): $tempresponse2\n");
-	my $inputoutput = hex(unpack("H*", substr($tempresponse,0,1)));	
-	return $inputoutput;
+	my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getFanspeed(): $tempresponse\n");
+	my $fanspeed = hex($tempresponse);	
+	return $fanspeed;
 }
 
-sub getBatteryLifeTime() {
-	# read batterylifetime 														<<<<<< Muss nochmal getestet werden, da Controller aktuell am Strom hängt
-	my ($hash,@r_setting) = @_;
+sub getModel() {
+	# read Modeltyp
+	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getBatteryLifeTime(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getBatteryLifeTime(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,1));
-	Log3($name, 5, "recvunpackData in getBatteryLifeTime(): $tempresponse2\n");
-	my $batterylifetime = hex(unpack("H*", substr($tempresponse,0,1)));	
-	return sprintf ('%.02f', $batterylifetime);
+	my $model = unpack("A*" , substr($data,0));
+	Log3($name, 5, "recvunpackData in getModel(): $model\n");
+	return $model;
 }
 
 sub getMode() {
 	# read Anlagenmodus
-	my ($hash,@r_setting) = @_;
+	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getMode(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getMode(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,1));
-	Log3($name, 5, "recvunpackData in getMode(): $tempresponse2\n");
-	my $getmode = hex(unpack("H*", substr($tempresponse,0,1)));	
+	my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getMode(): $tempresponse\n");
+	my $getmode = hex($tempresponse);	
 	if($getmode == 0){
 		return "Bedarfsmodus"
 	}elsif($getmode == 1){
@@ -797,75 +768,15 @@ sub getMode() {
 	}
 }
 
-sub getModel() {
-	# read Modeltyp
-	my ($hash,@r_setting) = @_;
-	my $name = $hash->{NAME};
-
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getModel(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getModel(): $tempresponse\n");
-	my $tempresponse2 = unpack("A*" , substr($tempresponse,0));
-	Log3($name, 5, "recvunpackData in getModel(): $tempresponse2\n");
-	my $model = unpack("A*" , substr($tempresponse,1));	
-	return $model;
-}
-
-sub getFilterLifeTime() {
-	# read verbleibende Filterlebensdauer in Prozent
-	my ($hash,@r_setting) = @_;
-	my $name = $hash->{NAME};
-
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getFilterLifeTime(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getFilterLifeTime(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,1));
-	Log3($name, 5, "recvunpackData in getFilterLifeTime(): $tempresponse2\n");
-	my $filterlifetime = hex(unpack("H*", substr($tempresponse,0,1))) * 100 / 255;	
-	return sprintf ('%.02f', $filterlifetime);
-}
-
-sub getFanSpeed() {
-	# read aktueller Lüftergeschwindigskeitsstufe von 1-10
-	my ($hash,@r_setting) = @_;
-	my $name = $hash->{NAME};
-
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getFanspeed(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getFanspeed(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,1));
-	Log3($name, 5, "recvunpackData in getFanspeed(): $tempresponse2\n");
-	my $fanspeed = hex(unpack("H*", substr($tempresponse,0,1)));	
-	return $fanspeed;
-}
-
-sub getTemperatur() {
-	# read Temperaturen
+sub getModelSN() {
+	# read Seriennummer
 	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
 	my $tempresponse = unpack("H*" , substr($data,0,2));
-	Log3($name, 5, "recvunpackData in getTemperatur(): $tempresponse\n");
-	my $temperature = hex($tempresponse);	
-	return sprintf ('%.02f', $temperature/100);
-}
-
-sub getHumidity() {
-	# read Luftfeuchtigkeit
-	my ($hash,@r_setting) = @_;
-	my $name = $hash->{NAME};
-
-	my $sendData = pack("C*" x 4, @r_setting);
-	Log3($name, 5, "sendData in getHumidity(): $sendData\n");
-	my $tempresponse = sendRequest($hash,$sendData);
-	Log3($name, 5, "recvData in getHumidity(): $tempresponse\n");
-	my $tempresponse2 = unpack("H*" , substr($tempresponse,0,1));
-	Log3($name, 5, "recvunpackData in getHumidity(): $tempresponse2\n");
-	my $humidity = hex(unpack("H*", substr($tempresponse,0,1))) * 100 / 255;	
-	return sprintf ('%.02f', $humidity);
+	Log3($name, 5, "recvunpackData in getModelSN(): $tempresponse\n");
+	my $modelsn = hex($tempresponse);	
+	return $modelsn;
 }
 
 sub getCommandKey() {
@@ -875,8 +786,20 @@ sub getCommandKey() {
 
 ####################### SEND Request #######################
 # VERBINDUNGSAUFBAU ZUR ANLAGE... 
-# $sendData soll immer der Übergabeparameter aus setXXX oder getXXX sein mit 5 oder 4 Zahlen.
+############################################################
 
+# SEND Request for SET
+sub sendRequest(){
+	my ($hash,@sendData) = @_;
+	my $name = $hash->{NAME};
+
+	my $data = pack("C*" x @sendData, @sendData);
+
+	Log3($name, 5, "sendData in sendRequest(): ".join(',', map(sprintf("0x%02x", $_), @sendData)));
+    ::DevIo_SimpleWrite( $hash, $data, 0 );
+}
+
+# SEND Request for GET
 sub sendNextRequest(){
 	my ($hash) = @_;
 	my $name = $hash->{NAME};
@@ -910,7 +833,7 @@ sub sendNextRequest(){
     <b>Define</b>
     <ul>
 		<code>define &lt;name&gt; AirUnit &lt;IP-address[:Port]&gt; [poll-interval]</code><br>
-		If the poll interval is omitted, it is set to 300 (seconds). Smallest possible value is 10.
+		If the poll interval is omitted, it is set to 300 (seconds). Smallest possible value is 30.
 		<br>
 		Usually, the port needs not to be defined.
 		<br>
@@ -950,7 +873,7 @@ sub sendNextRequest(){
                   You can activate/deactive the automatic Bypass-Option of you ventilations systems. Its automaticly activated, if the outdoor temperature and room temperature are higher then the configured values.<br>
 				  You can configure this mode in your AirDail-Controller.</li>
 				<li><i>Intervall</i><br>
-                  You can setup the refresh intervall of your readings.</li>
+                  You can setup the refresh intervall of your readings. Minimum 30 seconds.</li>
         </ul>
     </ul>
     <br>
