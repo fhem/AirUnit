@@ -31,7 +31,7 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.4.0 - Feb 2021';
+my $Version = '0.0.4.1 - Feb 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -114,7 +114,7 @@ sub Define(){
 	my $port = 30046;
 
 	my $interval = 5*60;
-	$interval = $a[3] if(int(@a) == 4);
+	$interval = $a[3] if(@a == 4);
 	$interval = 30 if( $interval < 30 );
 
 	$hash->{NAME} = $name;
@@ -153,7 +153,10 @@ sub Undefine() {
 sub Ready()
 {
   my ($hash) = @_;
-  
+
+  # reset command queue
+  $hash->{helper}{commandQueue} = [];
+
   # try to reopen the connection in case the connection is lost
   return ::DevIo_OpenDev($hash, 1, undef, \&Callback); 
 }
@@ -273,9 +276,12 @@ sub Callback()
     my $name = $hash->{NAME};
 
 	# create a log emtry with the error message
-	Log3($name, 5, "AirUnit ($name) - error while connecting: $error") if($error);
-
-	GetUpdate($hash);
+	if ($error) {
+		Log3($name, 5, "AirUnit ($name) - error while connecting: $error");
+	}
+	elsif (::DevIo_IsOpen($hash)) {
+		GetUpdate($hash);
+	}
 
     return undef;
 }
@@ -482,9 +488,10 @@ sub Attr() {
 sub GetUpdate() {
 	my ($hash) = @_;
 	my $name = $hash->{NAME};
+	my $interval = $hash->{INTERVAL};
 
 	RemoveInternalTimer($hash);
-	InternalTimer(gettimeofday()+$hash->{INTERVAL}, \&GetUpdate, $hash, 0);
+	InternalTimer(gettimeofday()+$interval, \&GetUpdate, $hash, 0);
 	return undef if( AttrVal($name, "disable", 0 ) == 1 );
 
 	DoUpdate($hash) if (::DevIo_IsOpen($hash));
