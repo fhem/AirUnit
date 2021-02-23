@@ -17,6 +17,7 @@ BEGIN {
 		readingsBulkUpdate
 		readingsEndUpdate
 		readingFnAttributes
+        ReadingsVal
 		Log3
 		gettimeofday
 		InternalVal
@@ -31,7 +32,7 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.4.2 - Feb 2021';
+my $Version = '0.0.4.4 - Feb 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -237,11 +238,10 @@ sub Get() {
       }
    }
 
-   my $list = " update:noArg"
-			. " nothing"
-			. " get_Overview:noArg";
+   my $list = " update:noArg";
        
    return "Unknown argument $cmd, choose one of $list";
+      
 }
 
 ########################################
@@ -269,9 +269,9 @@ sub Set() {
 	}
 	elsif ($cmd eq 'Luefterstufe') {
 		Log3($name, 3, "set $name $cmd $val");
-#		my $myMode = ReadingsVal($name, "Modus" , "");
-#		if (($val <= 10 || $val >= 1) and $myMode eq "Manuell"){
-		if ($val <= 10 || $val >= 1){
+		my $myMode = ReadingsVal($name, "Modus" , "");
+		Log3($name, 3, "ReadingsVal: $myMode");
+		if (($val <= 10 || $val >= 1) and $myMode eq "Manuell"){
 			@w_settings = (@W_FAN_STEP, $val);
 			DoChange($hash, \@w_settings, \@FAN_STEP);
 		}else{	
@@ -279,7 +279,7 @@ sub Set() {
 		}
 		return undef;
 	}
-    elsif ($cmd eq 'Boost'){
+    elsif ($cmd eq 'Stosslueftung'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_BOOST, 0x01);
@@ -340,7 +340,7 @@ sub Set() {
 		# sendRequest($hash, @w_settings);
 		# return undef;
 	# }
-	elsif ($cmd eq 'automatischerBoost'){
+	elsif ($cmd eq 'automatische_Stosslueftung'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_DISABLE_BOOST_AUTOMATIC, 0x00);
@@ -352,7 +352,7 @@ sub Set() {
 		DoChange($hash, \@w_settings, \@BOOST_AUTOMATIC);
 		return undef;
 	}
-	elsif ($cmd eq 'automatischerBypass'){
+	elsif ($cmd eq 'automatischer_Bypass'){
 		Log3($name, 3, "set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_DISABLE_BYPASS_AUTOMATIC, 0x00);
@@ -373,13 +373,13 @@ sub Set() {
 	
 	my $list = " Modus:Bedarfsmodus,Programm,Manuell,Aus "
 		." Luefterstufe:slider,1,1,10 "
-		." Boost:on,off "
+		." Stosslueftung:on,off "
 		." Bypass:on,off "
 		." Nachtkuehlung:on,off "
 		." Feuerstaette:on,off "
 #		." Dunstabzugshaube:on,off "
-		." automatischerBoost:on,off "
-		." automatischerBypass:on,off "
+		." automatische_Stosslueftung:on,off "
+		." automatischer_Bypass:on,off "
 		." Intervall";
           
 	return "Unknown argument $cmd, choose one of $list";
@@ -550,19 +550,19 @@ sub InitCommands() {
 	};
 	$commands{getCommandKey(@BOOST)} = sub {
 		my ($hash,$buf) = @_;
-		readingsSingleUpdate( $hash, "Stosslueftung", getONOFF($hash, $buf), 1);
+		readingsSingleUpdate( $hash, "Stosslueftung_aktiviert", getONOFF($hash, $buf), 1);
 	};
 	$commands{getCommandKey(@BYPASS)} = sub {
 		my ($hash,$buf) = @_;
-		readingsSingleUpdate( $hash, "Bypass", getONOFF($hash, $buf), 1);
+		readingsSingleUpdate( $hash, "Bypass_aktiviert", getONOFF($hash, $buf), 1);
 	};
 	$commands{getCommandKey(@NIGHTCOOLING)} = sub {
 		my ($hash,$buf) = @_;
-		readingsSingleUpdate( $hash, "Stosslueftung", getONOFF($hash, $buf), 1);
+		readingsSingleUpdate( $hash, "Nachtkuehlung_aktiviert", getONOFF($hash, $buf), 1);
 	};
 	$commands{getCommandKey(@FIREPLACE)} = sub {
 		my ($hash,$buf) = @_;
-		readingsSingleUpdate( $hash, "Bypass", getONOFF($hash, $buf), 1);
+		readingsSingleUpdate( $hash, "Feuerstaette_aktiviert", getONOFF($hash, $buf), 1);
 	};
 	$commands{getCommandKey(@BOOST_AUTOMATIC)} = sub {
 		my ($hash,$buf) = @_;
@@ -594,7 +594,7 @@ sub InitCommands() {
 	};
 	$commands{getCommandKey(@FAN_STEP)} = sub {
 		my ($hash,$buf) = @_;
-		readingsSingleUpdate( $hash, "Luefterstufe", getFanSpeed($hash, $buf), 1);
+		readingsSingleUpdate( $hash, "Luefterstufe_manuell", getFanSpeed($hash, $buf), 1);
 	};
 
 	$hash->{helper}{commandHash} = \%commands;
@@ -664,12 +664,14 @@ sub getONOFF() {
 	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $onoff = unpack("H*" , substr($data,0,1));
-	Log3($name, 5, "recvunpackData in getONOFF(): my $onoff\n");
-	if($onoff == 0xff){
+	my $onoff = hex(unpack("H*" , substr($data,0,1)));
+	Log3($name, 5, "recvunpackData in getONOFF(): $onoff\n");
+	if($onoff == 1){
 		return "An"
-	}elsif($onoff == 0x00){
+	}elsif($onoff == 0){
 		return "Aus"
+	}elsif($onoff == 255){	#für aktueller Status des Bypasses (aktiv)
+		return "An"
 	}else {
 		Log3($name, 1,  "Unbekannter Paramter in getONOFF(): $onoff\n");
 	}
@@ -680,11 +682,11 @@ sub getOFFON() {
 	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $offon = unpack("H*" , substr($data,0,1));
+	my $offon = hex(unpack("H*" , substr($data,0,1)));
 	Log3($name, 5, "recvunpackData in getOFFON(): $offon\n");
-	if($offon == 0x00){
+	if($offon == 0){
 		return "An"
-	}elsif($offon == 0xff){
+	}elsif($offon == 1){
 		return "Aus"
 	}else {
 		Log3($name, 1,  "Unbekannter Paramter in getOFFON(): $offon\n");
@@ -718,7 +720,7 @@ sub getModel() {
 	my ($hash,$data) = @_;
 	my $name = $hash->{NAME};
 
-	my $model = unpack("A*" , substr($data,0));
+	my $model = unpack("A*" , substr($data,1));
 	Log3($name, 5, "recvunpackData in getModel(): $model\n");
 	return $model;
 }
@@ -794,6 +796,112 @@ sub sendNextRequest(){
     <i>AirUnit</i> implements a FHEM device to control Danfoss AirUnits (a1,a2,w1,w2). Tested only with w2 (Feb 2021). 
     With this module it is possible to control the most useful functions of your ventilation system.
     <br><br>
+	
+	<table>
+	  <tr>
+		<th>possible Readings</th>
+		<th>units of values</th>
+	  </tr>
+	  <tr>
+		<td>Abluft_Grundstufe_Einstellung</td>
+		<td>percent</td>
+	   </tr>
+	   <tr>
+		 <td>Abluft_Luefterdrehzahl</td>
+		 <td>rpm</td>
+	   </tr>
+	   	 <tr>
+		 <td>Abluft_Stufe</td>
+		 <td>step</td>
+	   </tr>
+	   	 <tr>
+		 <td>Abluft_Temperatur</td>
+		 <td>degree</td>
+	   </tr>
+	   	 <tr>
+		 <td>Aussenluft_Temperatur</td>
+		 <td>degree</td>
+	   </tr>
+	   	 <tr>
+		 <td>Bypass_aktiviert</td>
+		 <td>on/off</td>
+	   </tr>
+	   	 <tr>
+		 <td>Feuerstaette_aktiviert</td>
+		 <td>on/off</td>
+	   </tr>
+	   	 <tr>
+		 <td>Fortluft_Temperatur</td>
+		 <td>degree</td>
+	   </tr>
+	   	 <tr>
+		 <td>Luefterstufe_manuell</td>
+		 <td>step</td>
+	   </tr>
+	   	 <tr>
+		 <td>Luftfeuchtigkeit</td>
+		 <td>percent</td>
+	   </tr>
+	   	 <tr>
+		 <td>Model</td>
+		 <td>name</td>
+	   </tr>
+	   	<tr>
+		 <td>Modus</td>
+		 <td>mode of operation</td>
+	   </tr>
+	   	 <tr>
+		 <td>Nachtkuehlung_aktiviert</td>
+		 <td>on/off</td>
+	   </tr>
+	   	 <tr>
+		 <td>Raumluft_Temperatur_AirDail</td>
+		 <td>degree</td>
+	   </tr>
+	   	 <tr>
+		 <td>Seriennummer</td>
+		 <td>number</td>
+	   </tr>
+	   	 <tr>
+		 <td>Stosslueftung_aktiviert</td>
+		 <td>on/off</td>
+	   </tr>
+	   	 <tr>
+		 <td>Zuluft_Grundstufe_Einstellung</td>
+		 <td>percent</td>
+	   </tr>
+	   	 <tr>
+		 <td>Zuluft_Luefterdrehzahl</td>
+		 <td>rpm</td>
+	   </tr>
+	   	 <tr>
+		 <td>Zuluft_Stufe</td>
+		 <td>step</td>
+	   </tr>
+	   	 <tr>
+		 <td>Zuluft_Temperatur</td>
+		 <td>degree</td>
+	   </tr>
+	   	 <tr>
+		 <td>automatische_Stosslueftung</td>
+		 <td>on/off</td>
+	   </tr>
+	   	 <tr>
+		 <td>automatischer_Bypass</td>
+		 <td>on/off</td>
+	   </tr>
+	   	 <tr>
+		 <td>verbl.Batterielebensdauer_AirDial</td>
+		 <td>percent</td>
+	   </tr>
+	   	 <tr>
+		 <td>verbl.verbl.Filterlebensdaue</td>
+		 <td>percent</td>
+	   </tr>
+	</table>	
+	<br><br>
+	
+	
     <a name="AirUnitdefine"></a>
     <b>Define</b>
     <ul>
@@ -821,24 +929,27 @@ sub sendNextRequest(){
 						<i>"Programm"</i>, you can define a programm in your AirDail-Controller and choose one.<br>
 						<i>"Manuell"</i>, you can set the steps for the fans manually (only in manual mode). Bypass and Boost are in automatic mode.<br>
 						<i>"Aus"</i>, the system is off for 24 hours, after this time, the system starts in automatic mode with fanstep 1.
-				<li><i>Lüfterstufe</i><br>
+				<li><i>Luefterstufe</i><br>
                   You can set the steps for the fans manually. (only in manual mode)</li>
-				<li><i>Boost</i><br>
+				<li><i>Stosslueftung</i><br>
                   You can activate/deactive the Boost-Option of your ventilation system. You can configure this mode in your AirDail-Controller, the standard fanstep 10 for 3 hours.<br>
 				  It is useful if you need more Air e.g. in case of cooking or a party with more people.</li>
 				<li><i>Bypass</i><br>
                   You can activate/deactive the Bypass-Option of you ventilations systems. Its a cooling function, the heat exchanger will be deactivated.<br>
 				  You can configure this mode in your AirDail-Controller, the standard time is 3 hours.<br>
-				  <b>You can´t activte it, if the outdoor temperature is under 5°C.</b></li>
-				<li><i>Nachtkühlung</i><br>
+				  <b>You can´t activte it, if the outdoor temperature is under 5°C.<br>
+				  This option is not available for w1-unit.</b></li>
+				<li><i>Nachtkuehlung</i><br>
                   You can activate/deactive the nightcooling option of you ventilations systems. You can configure this in your AirDail-Controller.</li>
-				<li><i>automatischer Boost</i><br>
+				<li><i>automatische_Stosslueftung</i><br>
                   You can activate/deactive the automatic Boost-Option of you ventilations systems. Its automaticly activated, if the humidity increase very strong, then it runs for 30min.</li>
-				<li><i>automatischer Bypass</i><br>
+				<li><i>automatischer_Bypass</i><br>
                   You can activate/deactive the automatic Bypass-Option of you ventilations systems. Its automaticly activated, if the outdoor temperature and room temperature are higher then the configured values.<br>
 				  You can configure this mode in your AirDail-Controller.</li>
 				<li><i>Intervall</i><br>
                   You can setup the refresh intervall of your readings. Minimum 30 seconds.</li>
+				<li><i>Feuerstaette</i><br>
+                You can setup the refresh intervall of your readings. Minimum 30 seconds.</li>
         </ul>
     </ul>
     <br>
