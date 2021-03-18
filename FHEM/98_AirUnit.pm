@@ -1,3 +1,29 @@
+##############################################################################
+#
+#     98_AirUnit.pm
+#     An FHEM Perl module for controlling Danfoss AirUnits (a1,a2,w1,w2).
+#
+#     Copyright by René Dommerich & Ulf von Mersewsky
+#     e-mail: rdommerich at gmx punkt com
+#     e-mail: umersewsky at gmail punkt com
+#
+#     This file is part of fhem.
+#
+#     Fhem is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 2 of the License, or
+#     (at your option) any later version.
+#
+#     Fhem is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with fhem.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
+
 package FHEM::AirUnit;
 
 use GPUtils         qw(:all);
@@ -30,7 +56,7 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.4.9 - Mar 2021';
+my $Version = '0.0.5.1 - Mar 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -136,18 +162,13 @@ sub Define(){
     $hash->{NOTIFYDEV} = "global";
     $hash->{DeviceName} = join(':', $host, $port);
 
-      $hash->{helper}{commandQueue} = [];
+	$hash->{helper}{commandQueue} = [];
  
-      InitCommands($hash);
+	InitCommands($hash);
 
     ::DevIo_CloseDev($hash) if ( ::DevIo_IsOpen($hash) );
-    ::DevIo_OpenDev( $hash, 0, undef, \&Callback );
+	::DevIo_OpenDev( $hash, 0, undef, \&Callback ) if (AttrVal($name, "disable", 0) == 0);
 	
-	# sollte das hiermit gehen?!
-	# if ( ::DevIo_IsOpen($hash) ) {
-	# $hash->{Model} = sendRequest(...........)
-	# $hash->{Seriennummer} = sendRequest(...........)
-	# }
     return;
 }
 
@@ -1026,8 +1047,8 @@ sub sendNextRequest(){
 				<li><i>Bypass_Dauer</i><br>
 				  You can set the hours for the duration of Bypass-Option manually.</li>
 				<li><i>Nachtkuehlung</i><br>
-                  You can activate/deactive the nightcooling option of you ventilations systems. You can configure this in your AirDail-Controller.</li><br>
-				  This option is not available for w1-unit.</b></li>
+                  You can activate/deactive the nightcooling option of you ventilations systems. You can configure this in your AirDail-Controller.<br>
+				<b>This option is not available for w1-unit.</b></li>
 				<li><i>automatische_Stosslueftung</i><br>
                   You can activate/deactive the automatic Boost-Option of you ventilations systems. Its automaticly activated, if the humidity increase very strong, then it runs for 30min.</li>
 				<li><i>automatischer_Bypass</i><br>
@@ -1064,10 +1085,26 @@ sub sendNextRequest(){
         Attributes:
         <ul>
             <li><i>disable</i> 0|1<br>
-                When you set disable to "1", the physical connection and the refresh intervall will be disabled.<br>
+                When you set disable to "1", the connection and the refresh intervall will be disabled. (takes a while)<br>
 				This feature gives you the possibility to use an external connection (e.g. the Danfoss-Windows-Tool) without deletion of the device.<br>
             </li>
         </ul>
+    </ul>
+    <br>
+	
+	<a name="AirUnitaddinfo"></a>
+    <b>additional information</b>
+    <ul>
+            <li><i>PC-Tool</i><br>
+				You can donwload the Danfoss-Windows-Tool <a href="https://www.danfoss.com/da-dk/service-and-support/downloads/dhs/danfoss-air-pc-tool-end-user/#tab-overview">HERE</a>.<br>
+				You can start this tool with 3 different options: enduser, service or installer.<br>
+				You need only to change the "HRVPCTool.exe.config" in the installation directory.<br>
+				<ul>
+					<li>enduser {47464213-F94A-495e-81A0-486E54CB4F64}</li>
+					<li>service {FC0CB02C-1695-4064-BCD9-FC0A5D77ED3D}</li>
+					<li>installer {E4C3938B-9F3E-427e-85CF-A42FE350326D}</li>
+				</ul>
+            </li>
     </ul>
 	
 </ul>
