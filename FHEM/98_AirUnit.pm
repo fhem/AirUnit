@@ -4,8 +4,6 @@ use GPUtils         qw(:all);
 use strict;
 use warnings;
 
-#use SetExtensions;
-
 require DevIo;
 
 BEGIN {
@@ -32,7 +30,7 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.4.5 - Mar 2021';
+my $Version = '0.0.4.9 - Mar 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -54,8 +52,11 @@ my @FILTER_LIFE = (0x01, 0x04, 0x14, 0x6a);             #### REGISTER_1_READ, FI
 
 my @BOOST = (0x01, 0x04, 0x15, 0x30);                   #### REGISTER_1_READ, BOOST ON/OFF
 my @BOOST_AUTOMATIC = (0x01, 0x04, 0x17, 0x02);         #### REGISTER_1_READ, BOOST_AUTOMATIC ON/OFF
+my @BOOST_DURATION = (0x01, 0x04, 0x15, 0x31);			#### REGISTER_1_READ, BOOST_DURATION
 my @BYPASS = (0x01, 0x04, 0x14, 0x60);                  #### REGISTER_1_READ, BYPASS
 my @BYPASS_AUTOMATIC = (0x01, 0x04, 0x17, 0x06);        #### REGISTER_1_READ, BYPASS_AUTOMATIC ON/OFF
+my @BYPASS_DURATION = (0x01, 0x04, 0x14, 0x62);			#### REGISTER_1_READ, BYPASS_DURATION
+
 my @NIGHTCOOLING = (0x01, 0x04, 0x15, 0x71);            #### REGISTER_1_READ, NIGHTCOOLING ON/OFF
 my @FIREPLACE = (0x01, 0x04, 0x17, 0x07);               #### REGISTER_1_READ, FIREPLACE ON/OFF
 #my @COOKERHOOD = (0x01, 0x04, 0x15, 0x34);				#### REGISTER_1_READ, COOKERHOOD ON/OFF
@@ -63,18 +64,19 @@ my @FIREPLACE = (0x01, 0x04, 0x17, 0x07);               #### REGISTER_1_READ, FI
 my @MODE = (0x01, 0x04, 0x14, 0x12);                    #### REGISTER_1_READ, MODE
 my @FAN_STEP = (0x01, 0x04, 0x15, 0x61);                #### REGISTER_1_READ, FANSPEED / FANSTUFE in MANUELL - MODE
 
-my @FANSPEED_IN_RPM = (0x04, 0x04, 0x14, 0x50);         #### REGISTER_1_READ, FANSPEED_IN_RPM
-my @FANSPEED_OUT_RPM = (0x04, 0x04, 0x14, 0x51);        #### REGISTER_1_READ, FANSPEED_OUT_RPM
+my @FANSPEED_IN_RPM = (0x04, 0x04, 0x14, 0x50);         #### REGISTER_4_READ, FANSPEED_IN_RPM
+my @FANSPEED_OUT_RPM = (0x04, 0x04, 0x14, 0x51);        #### REGISTER_4_READ, FANSPEED_OUT_RPM
 
 my @MODEL = (0x01, 0x04, 0x15, 0xe5);                   #### REGISTER_1_READ, MODEL
 my @MODEL_SN = (0x04, 0x04, 0x00, 0x25);                #### REGISTER_4_READ, MODEL SERIALNUMBER
+my @OPERATION_TIME = (0x00, 0x04, 0x03, 0xe0);			#### REGISTER_0_READ, OPERATION_TIME
 
 ####################### SET Paramter ##################################################################
 # Das sind die Zahlen die gesendet werden müssen + eine 5. (die Option), damit man etwas bewirken kann.
 #######################################################################################################
 
 my @W_BOOST = (0x01, 0x06, 0x15, 0x30);                     #### REGISTER_1_WRITE, BOOST ON/OFF
-my @W_BYPASS = (0x01, 0x06, 0x14, 0x63);                    #### REGISTER_1_WRITE, BYPASS ON/OFF
+my @W_BYPASS = (0x01, 0x06, 0x14, 0x60);                    #### REGISTER_1_WRITE, BYPASS ON/OFF
 my @W_NIGHTCOOLING = (0x01, 0x06, 0x15, 0x71);              #### REGISTER_1_WRITE, NIGHTCOOLING ON/OFF
 my @W_DISABLE_BOOST_AUTOMATIC = (0x01, 0x06, 0x17, 0x02);   #### REGISTER_1_WRITE, BOOST_AUTOMATIC ON/OFF
 my @W_DISABLE_BYPASS_AUTOMATIC = (0x01, 0x06, 0x17, 0x06);  #### REGISTER_1_WRITE, BYPASS_AUTOMATIC ON/OFF
@@ -82,6 +84,9 @@ my @W_MODE = (0x01, 0x06, 0x14, 0x12);                      #### REGISTER_1_WRIT
 my @W_FAN_STEP = (0x01, 0x06, 0x15, 0x61);                  #### REGISTER_1_WRITE, FAN_STEP
 my @W_FIREPLACE = (0x01, 0x06, 0x17, 0x07);                 #### REGISTER_1_WRITE, FIREPLACE ON/OFF
 #my @W_COOKERHOOD = (0x01, 0x06, 0x15, 0x34);				#### REGISTER_1_WRITE, COOKERHOOD ON/OFF
+my @W_BOOST_DURATION = (0x01, 0x06, 0x15, 0x31);			#### REGISTER_1_READ, BOOST_DURATION
+my @W_BYPASS_DURATION = (0x01, 0x06, 0x14, 0x62);			#### REGISTER_1_READ, BYPASS_DURATION
+
 
 ########################################
 
@@ -97,7 +102,6 @@ sub Initialize()
   $hash->{ReadyFn}  = \&Ready;          # wird von DevIO bei Kommunikationsproblemen gerufen
   $hash->{AttrFn}   = \&Attr;           # nur kopiert und angepasst
   $hash->{AttrList} = "disable:0,1 ".
-                    "allowSetParameter:0,1 ".
                     $readingFnAttributes;
 
   return;
@@ -138,7 +142,12 @@ sub Define(){
 
     ::DevIo_CloseDev($hash) if ( ::DevIo_IsOpen($hash) );
     ::DevIo_OpenDev( $hash, 0, undef, \&Callback );
-
+	
+	# sollte das hiermit gehen?!
+	# if ( ::DevIo_IsOpen($hash) ) {
+	# $hash->{Model} = sendRequest(...........)
+	# $hash->{Seriennummer} = sendRequest(...........)
+	# }
     return;
 }
 
@@ -159,12 +168,18 @@ sub Undefine() {
 sub Ready()
 {
   my ($hash) = @_;
-
+  my $name = $hash->{NAME};
+  my $disableConnection = AttrVal($name, "disable", 0);
   # reset command queue
   $hash->{helper}{commandQueue} = [];
 
-  # try to reopen the connection in case the connection is lost
+  # try to reopen the connection in case the connection is lost and Attribute disable = 0
+  if ($disableConnection == 1){
+	::DevIo_CloseDev($hash) if ( ::DevIo_IsOpen($hash) );
+  }
+  else {
   return ::DevIo_OpenDev($hash, 1, undef, \&Callback); 
+  }
 }
 
 ########################################
@@ -224,22 +239,7 @@ sub Get() {
   
   if($cmd eq 'update') {
       DoUpdate($hash) if (::DevIo_IsOpen($hash));
-   }
-   elsif($cmd eq 'nothing') {
-      # Log3 $name, 3, "get $name $cmd";
-      if (int @val !=1000) {
-         my $msg = "Wrong number of parameter (".int @val.")in get $name $cmd";
-         Log3($name, 3, $msg);
-         return $msg;
-      }
-   }
-   elsif( $cmd eq 'get_Overview') {
-      # Log3 $name, 3, "get $name $cmd";
-      if (int @val !=4000 ) {
-         my $msg = "Wrong number of parameter (".int @val.")in get $name $cmd";
-         Log3($name, 3, $msg);
-         return $msg;
-      }
+	  return;
    }
 
    my $list = " update:noArg";
@@ -367,6 +367,26 @@ sub Set() {
 		DoChange($hash, \@w_settings, \@BYPASS_AUTOMATIC);
 		return;
 	}
+	elsif ($cmd eq 'Stosslueftung_Dauer'){
+		Log3($name, 3, "set $name $cmd $val");
+		if($val <= 23 || $val >= 1){
+			@w_settings = (@W_BOOST_DURATION, $val);
+		}else {
+			return "Fehlerhafter Paramter $val für Setting $cmd\n";
+		}
+		DoChange($hash, \@w_settings, \@BOOST_DURATION);
+		return;
+	}
+	elsif ($cmd eq 'Bypass_Dauer'){
+		Log3($name, 3, "set $name $cmd $val");
+		if($val <= 23 || $val >= 1){
+			@w_settings = (@W_BYPASS_DURATION, $val);
+		}else {
+			return "Fehlerhafter Paramter $val für Setting $cmd\n";
+		}
+		DoChange($hash, \@w_settings, \@BYPASS_DURATION);
+		return;
+	}
 	elsif($cmd eq 'Intervall' && defined($val) ) {
       Log3($name, 3, "set $name $cmd $val");
       $val = 30 if( $val < 30 );
@@ -383,14 +403,14 @@ sub Set() {
 #		." Dunstabzugshaube:on,off "
 		." automatische_Stosslueftung:on,off "
 		." automatischer_Bypass:on,off "
+		." Stosslueftung_Dauer:slider,1,1,23 "
+		." Bypass_Dauer:slider,1,1,23 "
 		." Intervall";
           
     return "Unknown argument $cmd, choose one of $list";
 }
 
 ######################################## 	
-# hier ist noch die Frage was man an Attributen setzen könnte... zB on-for-timer für die erweiterten Settings wäre gut
-# viell kann man dann sagen on-for-timer BOOST Modus (wobei der Boost Modus in der Anlage eine über einen externen Controller setztbaren Timer hat)
 
 sub Attr() {
     
@@ -479,6 +499,9 @@ sub DoUpdate(){
     push(@$queueRef, \@MODE);
     push(@$queueRef, \@MODEL_SN);
     push(@$queueRef, \@FAN_STEP);
+	push(@$queueRef, \@BOOST_DURATION);
+    push(@$queueRef, \@BYPASS_DURATION);
+	push(@$queueRef, \@OPERATION_TIME);
 
     sendNextRequest($hash) if ($orgQueueCount == 0);
 
@@ -599,6 +622,18 @@ sub InitCommands() {
 	$commands{getCommandKey(@FAN_STEP)} = sub {
 		my ($subHash,$buf) = @_;
 		readingsSingleUpdate( $subHash, "Luefterstufe_manuell", getFanSpeed($subHash, $buf), 1);
+	};
+	$commands{getCommandKey(@BOOST_DURATION)} = sub {
+		my ($subHash,$buf) = @_;
+		readingsSingleUpdate( $subHash, "Boost_Dauer", getDurationTime($subHash, $buf), 1);
+	};
+	$commands{getCommandKey(@BYPASS_DURATION)} = sub {
+		my ($subHash,$buf) = @_;
+		readingsSingleUpdate( $subHash, "Bypass_Dauer", getDurationTime($subHash, $buf), 1);
+	};
+	$commands{getCommandKey(@OPERATION_TIME)} = sub {
+		my ($subHash,$buf) = @_;
+		readingsSingleUpdate( $subHash, "Arbeitsstunden", getOperationTime($subHash, $buf), 1);
 	};
 
 	$hash->{helper}{commandHash} = \%commands;
@@ -768,6 +803,28 @@ sub getModelSN() {
     return $modelsn;
 }
 
+sub getDurationTime() {
+	# read aktuelle Dauer in Stunden für BYPASS_DURATION and BOOST_DURATION
+	my ($hash,$data) = @_;
+    my $name = $hash->{NAME};
+	
+    my $tempresponse = unpack("H*" , substr($data,0,1));
+	Log3($name, 5, "recvunpackData in getDurationTime(): $tempresponse\n");
+    my $getduration = hex($tempresponse);
+	return $getduration;
+}
+
+sub getOperationTime() {
+    # read Arbeitsstunden
+    my ($hash,$data) = @_;
+    my $name = $hash->{NAME};
+
+    my $tempresponse = unpack("H*", substr($data,0,4));	
+    Log3($name, 5, "recvunpackData in getModelSN(): $tempresponse\n");
+	my $operationtime = hex($tempresponse) / 60;
+	return sprintf ('%.01f', $operationtime);
+}
+
 sub getCommandKey() {
     my (@command) = @_;
     return unpack('H*', pack('C*' x @command, @command));
@@ -839,6 +896,10 @@ sub sendNextRequest(){
 		 <td>Bypass_aktiviert</td>
 		 <td>on/off</td>
 	   </tr>
+	    <tr>
+		 <td>Bypass_Dauer</td>
+		 <td>hour</td>
+	   </tr>
 	   	 <tr>
 		 <td>Feuerstaette_aktiviert</td>
 		 <td>on/off</td>
@@ -880,6 +941,10 @@ sub sendNextRequest(){
 		 <td>on/off</td>
 	   </tr>
 	   	 <tr>
+		 <td>Stosslueftung_Dauer</td>
+		 <td>hour</td>
+	   </tr>
+	   	 <tr>
 		 <td>Zuluft_Grundstufe_Einstellung</td>
 		 <td>percent</td>
 	   </tr>
@@ -910,6 +975,10 @@ sub sendNextRequest(){
 	   	 <tr>
 		 <td>verbl.verbl.Filterlebensdaue</td>
 		 <td>percent</td>
+	   </tr>
+	   	 <tr>
+		 <td>Arbeitsstunden</td>
+		 <td>hour</td>
 	   </tr>
 	</table>	
 	<br><br>
@@ -947,13 +1016,18 @@ sub sendNextRequest(){
 				<li><i>Stosslueftung</i><br>
                   You can activate/deactive the Boost-Option of your ventilation system. You can configure this mode in your AirDail-Controller, the standard fanstep 10 for 3 hours.<br>
                   It is useful if you need more Air e.g. in case of cooking or a party with more people.</li>
+				<li><i>Stosslueftung_Dauer</i><br>
+				  You can set the hours for the duration of Boost-Option manually.</l
                 <li><i>Bypass</i><br>
                   You can activate/deactive the Bypass-Option of you ventilations systems. Its a cooling function, the heat exchanger will be deactivated.<br>
 				  You can configure this mode in your AirDail-Controller, the standard time is 3 hours.<br>
 				  <b>You can´t activte it, if the outdoor temperature is under 5°C.<br>
 				  This option is not available for w1-unit.</b></li>
+				<li><i>Bypass_Dauer</i><br>
+				  You can set the hours for the duration of Bypass-Option manually.</li>
 				<li><i>Nachtkuehlung</i><br>
-                  You can activate/deactive the nightcooling option of you ventilations systems. You can configure this in your AirDail-Controller.</li>
+                  You can activate/deactive the nightcooling option of you ventilations systems. You can configure this in your AirDail-Controller.</li><br>
+				  This option is not available for w1-unit.</b></li>
 				<li><i>automatische_Stosslueftung</i><br>
                   You can activate/deactive the automatic Boost-Option of you ventilations systems. Its automaticly activated, if the humidity increase very strong, then it runs for 30min.</li>
 				<li><i>automatischer_Bypass</i><br>
@@ -962,39 +1036,40 @@ sub sendNextRequest(){
                 <li><i>Intervall</i><br>
                   You can setup the refresh intervall of your readings. Minimum 30 seconds.</li>
 				<li><i>Feuerstaette</i><br>
-                You can setup the refresh intervall of your readings. Minimum 30 seconds.</li>
+				  You can activate/deactive the Fireplace-Option.</li>
         </ul>
     </ul>
     <br>
 
-    <a name="AirUniget"></a>
+    <a name="AirUnitget"></a>
     <b>Get</b><br>
-    <ul>
-        <code>get &lt;name&gt; &lt;option&gt;</code>
+       <ul>
+        <code>set &lt;name&gt; &lt;option&gt; &lt;value&gt;</code>
         <br><br>
-        You can <i>get</i> the value of any of the options described in 
-        <a href="#Helloset">paragraph "Set" above</a>. See 
-        <a href="http://fhem.de/commandref.html#get">commandref#get</a> for more info about 
-        the get command.
+        You can <i>set</i> different values to any of the following options. 
+        <br><br>
+        Options:
+        <ul>
+			<li><i>update</i><br>
+            You can refresh all values manually.</li>
+        </ul>
     </ul>
     <br>
-    
-    <a name="AirUniattr"></a>
+	
+	<a name="AirUnitattr"></a>
     <b>Attributes</b>
     <ul>
         <code>attr &lt;name&gt; &lt;attribute&gt; &lt;value&gt;</code>
         <br><br>
-        See <a href="http://fhem.de/commandref.html#attr">commandref#attr</a> for more info about 
-        the attr command.
-        <br><br>
         Attributes:
         <ul>
-            <li><i>formal</i> no|yes<br>
-                When you set formal to "yes", all output of <i>get</i> will be in a
-                more formal language. Default is "no".
+            <li><i>disable</i> 0|1<br>
+                When you set disable to "1", the physical connection and the refresh intervall will be disabled.<br>
+				This feature gives you the possibility to use an external connection (e.g. the Danfoss-Windows-Tool) without deletion of the device.<br>
             </li>
         </ul>
     </ul>
+	
 </ul>
 
 =end html
