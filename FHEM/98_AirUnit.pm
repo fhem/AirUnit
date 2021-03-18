@@ -56,7 +56,7 @@ GP_Export(
       )
 );
 
-my $Version = '0.0.5.1 - Mar 2021';
+my $Version = '0.0.5.2 - Mar 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -78,10 +78,10 @@ my @FILTER_LIFE = (0x01, 0x04, 0x14, 0x6a);             #### REGISTER_1_READ, FI
 
 my @BOOST = (0x01, 0x04, 0x15, 0x30);                   #### REGISTER_1_READ, BOOST ON/OFF
 my @BOOST_AUTOMATIC = (0x01, 0x04, 0x17, 0x02);         #### REGISTER_1_READ, BOOST_AUTOMATIC ON/OFF
-my @BOOST_DURATION = (0x01, 0x04, 0x15, 0x31);			#### REGISTER_1_READ, BOOST_DURATION
+my @BOOST_DURATION = (0x01, 0x04, 0x15, 0x31);          #### REGISTER_1_READ, BOOST_DURATION
 my @BYPASS = (0x01, 0x04, 0x14, 0x60);                  #### REGISTER_1_READ, BYPASS
 my @BYPASS_AUTOMATIC = (0x01, 0x04, 0x17, 0x06);        #### REGISTER_1_READ, BYPASS_AUTOMATIC ON/OFF
-my @BYPASS_DURATION = (0x01, 0x04, 0x14, 0x62);			#### REGISTER_1_READ, BYPASS_DURATION
+my @BYPASS_DURATION = (0x01, 0x04, 0x14, 0x62);         #### REGISTER_1_READ, BYPASS_DURATION
 
 my @NIGHTCOOLING = (0x01, 0x04, 0x15, 0x71);            #### REGISTER_1_READ, NIGHTCOOLING ON/OFF
 my @FIREPLACE = (0x01, 0x04, 0x17, 0x07);               #### REGISTER_1_READ, FIREPLACE ON/OFF
@@ -95,7 +95,7 @@ my @FANSPEED_OUT_RPM = (0x04, 0x04, 0x14, 0x51);        #### REGISTER_4_READ, FA
 
 my @MODEL = (0x01, 0x04, 0x15, 0xe5);                   #### REGISTER_1_READ, MODEL
 my @MODEL_SN = (0x04, 0x04, 0x00, 0x25);                #### REGISTER_4_READ, MODEL SERIALNUMBER
-my @OPERATION_TIME = (0x00, 0x04, 0x03, 0xe0);			#### REGISTER_0_READ, OPERATION_TIME
+my @OPERATION_TIME = (0x00, 0x04, 0x03, 0xe0);          #### REGISTER_0_READ, OPERATION_TIME
 
 ####################### SET Paramter ##################################################################
 # Das sind die Zahlen die gesendet werden müssen + eine 5. (die Option), damit man etwas bewirken kann.
@@ -110,8 +110,8 @@ my @W_MODE = (0x01, 0x06, 0x14, 0x12);                      #### REGISTER_1_WRIT
 my @W_FAN_STEP = (0x01, 0x06, 0x15, 0x61);                  #### REGISTER_1_WRITE, FAN_STEP
 my @W_FIREPLACE = (0x01, 0x06, 0x17, 0x07);                 #### REGISTER_1_WRITE, FIREPLACE ON/OFF
 #my @W_COOKERHOOD = (0x01, 0x06, 0x15, 0x34);				#### REGISTER_1_WRITE, COOKERHOOD ON/OFF
-my @W_BOOST_DURATION = (0x01, 0x06, 0x15, 0x31);			#### REGISTER_1_READ, BOOST_DURATION
-my @W_BYPASS_DURATION = (0x01, 0x06, 0x14, 0x62);			#### REGISTER_1_READ, BYPASS_DURATION
+my @W_BOOST_DURATION = (0x01, 0x06, 0x15, 0x31);            #### REGISTER_1_READ, BOOST_DURATION
+my @W_BYPASS_DURATION = (0x01, 0x06, 0x14, 0x62);           #### REGISTER_1_READ, BYPASS_DURATION
 
 
 ########################################
@@ -199,8 +199,10 @@ sub Ready()
 	::DevIo_CloseDev($hash) if ( ::DevIo_IsOpen($hash) );
   }
   else {
-  return ::DevIo_OpenDev($hash, 1, undef, \&Callback); 
+  	return ::DevIo_OpenDev($hash, 1, undef, \&Callback); 
   }
+
+  return;
 }
 
 ########################################
@@ -510,19 +512,18 @@ sub DoUpdate(){
     push(@$queueRef, \@FANSPEED_IN_RPM);
     push(@$queueRef, \@FANSPEED_OUT_RPM);
 
-    #get_String
-
-    push(@$queueRef, \@MODEL);
-    push(@$queueRef, \@MODEL_SN);
-
     # get_Value
 
     push(@$queueRef, \@MODE);
-    push(@$queueRef, \@MODEL_SN);
     push(@$queueRef, \@FAN_STEP);
 	push(@$queueRef, \@BOOST_DURATION);
     push(@$queueRef, \@BYPASS_DURATION);
 	push(@$queueRef, \@OPERATION_TIME);
+
+    #get_String
+
+    push(@$queueRef, \@MODEL)    if (InternalVal($name, 'Model', '') eq '');
+    push(@$queueRef, \@MODEL_SN) if (InternalVal($name, 'Seriennummer', '') eq '');
 
     sendNextRequest($hash) if ($orgQueueCount == 0);
 
@@ -628,14 +629,6 @@ sub InitCommands() {
 		my ($subHash,$buf) = @_;
 		readingsSingleUpdate( $subHash, "Abluft_Luefterdrehzahl", getFanSpeedInRPM($subHash, $buf), 1);
 	};
-	$commands{getCommandKey(@MODEL)} = sub {
-		my ($subHash,$buf) = @_;
-		readingsSingleUpdate( $subHash, "Model", getModel($subHash, $buf), 1);
-	};
-	$commands{getCommandKey(@MODEL_SN)} = sub {
-		my ($subHash,$buf) = @_;
-		readingsSingleUpdate( $subHash, "Seriennummer", getModelSN($subHash, $buf), 1);
-	};
 	$commands{getCommandKey(@MODE)} = sub {
 		my ($subHash,$buf) = @_;
 		readingsSingleUpdate( $subHash, "Modus", getMode($subHash, $buf), 1);
@@ -655,6 +648,16 @@ sub InitCommands() {
 	$commands{getCommandKey(@OPERATION_TIME)} = sub {
 		my ($subHash,$buf) = @_;
 		readingsSingleUpdate( $subHash, "Arbeitsstunden", getOperationTime($subHash, $buf), 1);
+	};
+
+	# Internals
+	$commands{getCommandKey(@MODEL)} = sub {
+		my ($subHash,$buf) = @_;
+		$subHash->{Model} = getModel($subHash, $buf);
+	};
+	$commands{getCommandKey(@MODEL_SN)} = sub {
+		my ($subHash,$buf) = @_;
+		$subHash->{Seriennummer} = getModelSN($subHash, $buf);
 	};
 
 	$hash->{helper}{commandHash} = \%commands;
@@ -840,8 +843,8 @@ sub getOperationTime() {
     my ($hash,$data) = @_;
     my $name = $hash->{NAME};
 
-    my $tempresponse = unpack("H*", substr($data,0,4));	
-    Log3($name, 5, "recvunpackData in getModelSN(): $tempresponse\n");
+    my $tempresponse = unpack("H*", substr($data,0,4));
+    Log3($name, 5, "recvunpackData in getOperationTime(): $tempresponse\n");
 	my $operationtime = hex($tempresponse) / 60;
 	return sprintf ('%.01f', $operationtime);
 }
