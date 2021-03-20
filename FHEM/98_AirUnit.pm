@@ -47,16 +47,17 @@ BEGIN {
 		InternalVal
 		InternalTimer
 		RemoveInternalTimer
+        Value
     ));
 };
 
 GP_Export(
     qw(
-      Initialize
-      )
+        Initialize
+    )
 );
 
-my $Version = '0.0.5.2 - Mar 2021';
+my $Version = '0.0.5.3 - Mar 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -118,19 +119,19 @@ my @W_BYPASS_DURATION = (0x01, 0x06, 0x14, 0x62);           #### REGISTER_1_READ
 
 sub Initialize()
 {
-  my ($hash) = @_;
+    my ($hash) = @_;
 
-  $hash->{DefFn}    = \&Define;         # definiert das Gerät
-  $hash->{UndefFn}  = \&Undefine;       # legt fest, was alles mein löschen gemacht wird
-  $hash->{GetFn}    = \&Get;            # nicht wirklich benötigt, eher ein TEST, viell. fällt mir noch was ein
-  $hash->{SetFn}    = \&Set;            # dient zum setzen der SET Paramter
-  $hash->{ReadFn}   = \&Read;           # wird von DevIO beim Nachrichteneingang gerufen
-  $hash->{ReadyFn}  = \&Ready;          # wird von DevIO bei Kommunikationsproblemen gerufen
-  $hash->{AttrFn}   = \&Attr;           # nur kopiert und angepasst
-  $hash->{AttrList} = "disable:0,1 ".
-                    $readingFnAttributes;
+    $hash->{DefFn}    = \&Define;         # definiert das Gerät
+    $hash->{UndefFn}  = \&Undefine;       # legt fest, was alles mein löschen gemacht wird
+    $hash->{GetFn}    = \&Get;            # nicht wirklich benötigt, eher ein TEST, viell. fällt mir noch was ein
+    $hash->{SetFn}    = \&Set;            # dient zum setzen der SET Paramter
+    $hash->{ReadFn}   = \&Read;           # wird von DevIO beim Nachrichteneingang gerufen
+    $hash->{ReadyFn}  = \&Ready;          # wird von DevIO bei Kommunikationsproblemen gerufen
+    $hash->{AttrFn}   = \&Attr;           # nur kopiert und angepasst
+    $hash->{AttrList} = "disable:0,1 ".
+                        $readingFnAttributes;
 
-  return;
+    return;
 }
 
 ########################################
@@ -161,14 +162,17 @@ sub Define(){
     $hash->{INTERVAL} = $interval;
     $hash->{NOTIFYDEV} = "global";
     $hash->{DeviceName} = join(':', $host, $port);
+    $hash->{devioLoglevel} = 4;
 
 	$hash->{helper}{commandQueue} = [];
  
 	InitCommands($hash);
 
     ::DevIo_CloseDev($hash) if ( ::DevIo_IsOpen($hash) );
-	::DevIo_OpenDev( $hash, 0, undef, \&Callback ) if (AttrVal($name, "disable", 0) == 0);
-	
+
+    RemoveInternalTimer($hash);
+    InternalTimer(gettimeofday()+2, \&GetUpdate, $hash, 0);
+
     return;
 }
 
@@ -188,21 +192,18 @@ sub Undefine() {
 
 sub Ready()
 {
-  my ($hash) = @_;
-  my $name = $hash->{NAME};
-  my $disableConnection = AttrVal($name, "disable", 0);
-  # reset command queue
-  $hash->{helper}{commandQueue} = [];
+    my ($hash) = @_;
+    my $name = $hash->{NAME};
 
-  # try to reopen the connection in case the connection is lost and Attribute disable = 0
-  if ($disableConnection == 1){
-	::DevIo_CloseDev($hash) if ( ::DevIo_IsOpen($hash) );
-  }
-  else {
-  	return ::DevIo_OpenDev($hash, 1, undef, \&Callback); 
-  }
+    # reset command queue
+    $hash->{helper}{commandQueue} = [];
 
-  return;
+    # try to reopen the connection in case the connection is lost and Attribute disable = 0
+    if (AttrVal($name, "disable", 0) == 0) {
+        return ::DevIo_OpenDev($hash, 1, undef, \&sendNextRequest);
+    }
+
+    return;
 }
 
 ########################################
@@ -210,47 +211,27 @@ sub Ready()
 
 sub Read()
 {
-  my ($hash) = @_;
-  my $name = $hash->{NAME};
-  my $commands = $hash->{helper}{commandHash};
-
-  # read the available data
-  my $buf = ::DevIo_SimpleRead($hash);
-  
-  # stop processing if no data is available (device disconnected)
-  return if(!defined($buf));
-  
-  Log3($name, 4, "AirUnit ($name) - received: ".unpack('H*', $buf));
-
-  my $lastCmd = InternalVal($name, 'LastCommand', '');
-  
-  if (defined($commands->{$lastCmd})) {
-    $commands->{$lastCmd}->($hash, $buf);
-  } else {
-      Log3($name, 4, "AirUnit ($name) - handling of command not defined: $lastCmd");
-  }
-
-  sendNextRequest($hash);
-
-  return;
-}
-
-##########################################################################
-# will be executed if connection establishment fails (see DevIo_OpenDev())
-##########################################################################
-
-sub Callback()
-{
-    my ($hash, $error) = @_;
+    my ($hash) = @_;
     my $name = $hash->{NAME};
+    my $commands = $hash->{helper}{commandHash};
 
-    # create a log emtry with the error message
-    if ($error) {
-        Log3($name, 5, "AirUnit ($name) - error while connecting: $error");
+    # read the available data
+    my $buf = ::DevIo_SimpleRead($hash);
+    
+    # stop processing if no data is available (device disconnected)
+    return if(!defined($buf));
+    
+    Log3($name, 4, "AirUnit ($name) - received: ".unpack('H*', $buf));
+
+    my $lastCmd = InternalVal($name, 'LastCommand', '');
+    
+    if (defined($commands->{$lastCmd})) {
+        $commands->{$lastCmd}->($hash, $buf);
+    } else {
+        Log3($name, 4, "AirUnit ($name) - handling of command not defined: $lastCmd");
     }
-    elsif (::DevIo_IsOpen($hash)) {
-        GetUpdate($hash);
-    }
+
+    sendNextRequest($hash);
 
     return;
 }
@@ -258,17 +239,16 @@ sub Callback()
 ########################################
 
 sub Get() {
-  my ($hash, $name, $cmd, @val) = @_;
-  
-  if($cmd eq 'update') {
-      DoUpdate($hash) if (::DevIo_IsOpen($hash));
-	  return;
-   }
+    my ($hash, $name, $cmd, @val) = @_;
+    
+    if($cmd eq 'update') {
+        DoUpdate($hash) if (::DevIo_IsOpen($hash));
+        return;
+    }
 
-   my $list = " update:noArg";
-       
-   return "Unknown argument $cmd, choose one of $list";
-      
+    my $list = " update:noArg";
+        
+    return "Unknown argument $cmd, choose one of $list";      
 }
 
 ########################################
@@ -437,18 +417,31 @@ sub Set() {
 
 sub Attr() {
     
-       my ($cmd,$name,$aName,$aVal) = @_;
-       # $cmd can be "del" or "set"
-       # $name is device name
-       # aName and aVal are Attribute name and value
-       if ($cmd eq "set") {
-          if ($aName eq "allowSetParameter" and not eval { qr/$aVal/xms }) {
-                Log3($name, 3, "Invalid allowSetParameter in attr $name $aName $aVal: $@");
+    my ($cmd,$name,$aName,$aVal) = @_;
+    my $hash = $::defs{$name};
+
+    # $cmd can be "del" or "set"
+    # $name is device name
+    # aName and aVal are Attribute name and value
+    if ($cmd eq 'set') {
+        if ($aName eq 'disable') {
+            if ($aVal == 0) {
+                readingsSingleUpdate($hash, 'state', 'Initializing', 1) if (Value($name) ne 'opened');
+            } elsif ($aVal == 1) {
+                readingsSingleUpdate($hash, 'state', 'disabled', 1);
+            } else {
                 return "Invalid allowSetParameter $aVal";
-          }
-       }
-       
-       return;
+            }
+        }
+    }
+
+    if ($cmd eq 'del') {
+        if ($aName eq 'disable' && AttrVal($name, $aName, 0) == 1) {
+            readingsSingleUpdate($hash, 'state', 'Initializing', 1);
+        }
+    }
+
+    return;
 }
 
 ########################################
@@ -462,7 +455,7 @@ sub GetUpdate() {
     InternalTimer(gettimeofday()+$interval, \&GetUpdate, $hash, 0);
     return if( AttrVal($name, "disable", 0 ) == 1 );
 
-    DoUpdate($hash) if (::DevIo_IsOpen($hash));
+    DoUpdate($hash);
 
     return;
 }
@@ -860,12 +853,29 @@ sub getCommandKey() {
 
 # SEND Request
 sub sendNextRequest(){
-    my ($hash) = @_;
+    my ($hash,$error) = @_;
     my $name = $hash->{NAME};
     my $queueRef = $hash->{helper}{commandQueue};
 
-    # queue is empty - nothing to do
-    return if (!@$queueRef);
+    # create a log entry with the error message
+    if ($error) {
+        Log3($name, 5, "AirUnit ($name) - error while connecting: $error");
+		return;
+    }
+ 
+    # queue is empty / device disabled - nothing to do
+    if (!@$queueRef || AttrVal($name, "disable", 0) == 1) {
+        $queueRef = [];
+		::DevIo_CloseDev($hash);
+		return;
+	}
+
+	# open connection to send commands
+	if (!::DevIo_IsOpen($hash)) {
+        my $reopen = Value($name) eq 'opened' ? 1 : 0;
+        ::DevIo_OpenDev( $hash, $reopen, undef, \&sendNextRequest);
+        return;
+	}
 
     my @nextCmd = @{ shift(@$queueRef) };
     my $data = pack('C*' x @nextCmd, @nextCmd);
