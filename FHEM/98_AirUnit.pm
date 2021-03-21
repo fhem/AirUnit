@@ -57,7 +57,7 @@ GP_Export(
     )
 );
 
-my $Version = '0.0.5.3 - Mar 2021';
+my $Version = '0.0.5.4 - Mar 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -240,9 +240,9 @@ sub Read()
 
 sub Get() {
     my ($hash, $name, $cmd, @val) = @_;
-    
+	
     if($cmd eq 'update') {
-        DoUpdate($hash) if (::DevIo_IsOpen($hash));
+        DoUpdate($hash);
         return;
     }
 
@@ -256,7 +256,7 @@ sub Get() {
 sub Set() {
     my ($hash, $name, $cmd, $val) = @_;
     my @w_settings;
-  
+
     if($cmd eq 'Modus') {
       Log3($name, 3, "set $name $cmd $val");
 		if($val eq "Bedarfsmodus"){
@@ -632,7 +632,7 @@ sub InitCommands() {
 	};
 	$commands{getCommandKey(@BOOST_DURATION)} = sub {
 		my ($subHash,$buf) = @_;
-		readingsSingleUpdate( $subHash, "Boost_Dauer", getDurationTime($subHash, $buf), 1);
+		readingsSingleUpdate( $subHash, "Stosslueftung_Dauer", getDurationTime($subHash, $buf), 1);
 	};
 	$commands{getCommandKey(@BYPASS_DURATION)} = sub {
 		my ($subHash,$buf) = @_;
