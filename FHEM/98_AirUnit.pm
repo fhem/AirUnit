@@ -57,7 +57,7 @@ GP_Export(
     )
 );
 
-my $Version = '0.0.5.4 - Mar 2021';
+my $Version = '0.0.5.5 - Mar 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -225,7 +225,9 @@ sub Read()
 
     my $lastCmd = InternalVal($name, 'LastCommand', '');
     
-    if (defined($commands->{$lastCmd})) {
+	if ($buf =~ /\x00{63}/xms) {
+		# received answer from Set command
+	} elsif (defined($commands->{$lastCmd})) {
         $commands->{$lastCmd}->($hash, $buf);
     } else {
         Log3($name, 4, "AirUnit ($name) - handling of command not defined: $lastCmd");
@@ -241,7 +243,10 @@ sub Read()
 sub Get() {
     my ($hash, $name, $cmd, @val) = @_;
 	
-    if($cmd eq 'update') {
+	if ($cmd ne '?' && AttrVal($name, 'disable', 0) == 1) {
+		Log3($name, 3, "$name is disabled, ignore : get $name $cmd");
+		return;
+    } elsif($cmd eq 'update') {
         DoUpdate($hash);
         return;
     }
@@ -257,7 +262,10 @@ sub Set() {
     my ($hash, $name, $cmd, $val) = @_;
     my @w_settings;
 
-    if($cmd eq 'Modus') {
+	if ($cmd ne '?' && AttrVal($name, 'disable', 0) == 1) {
+		Log3($name, 3, "$name is disabled, ignore : set $name $cmd $val");
+		return;
+	} elsif($cmd eq 'Modus') {
       Log3($name, 3, "set $name $cmd $val");
 		if($val eq "Bedarfsmodus"){
 			@w_settings = (@W_MODE, 0x00);
