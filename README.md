@@ -21,10 +21,10 @@ Load the modules into FHEM:
 
 * from Master branch
 
-        update all https://raw.githubusercontent.com/fhem/INDEGO/master/controls_AirUnit.txt
+        update all https://raw.githubusercontent.com/fhem/AirUnit/master/controls_AirUnit.txt
 * from Dev branch
 
-        update all https://raw.githubusercontent.com/fhem/INDEGO/dev/controls_AirUnit.txt
+        update all https://raw.githubusercontent.com/fhem/AirUnit/dev/controls_AirUnit.txt
 
 Restart FHEM:
     
