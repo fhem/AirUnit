@@ -57,7 +57,7 @@ GP_Export(
     )
 );
 
-my $Version = '0.0.5.5 - Mar 2021';
+my $Version = '0.0.5.6 - Apr 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -225,8 +225,9 @@ sub Read()
 
     my $lastCmd = InternalVal($name, 'LastCommand', '');
     
-	if ($buf =~ /\x00{63}/xms) {
+	if ($lastCmd =~ /0106.*/xms && $buf =~ /\x00{63}/xms) {
 		# received answer from Set command
+        Log3($name, 4, "AirUnit ($name) - command performed: $lastCmd");
 	} elsif (defined($commands->{$lastCmd})) {
         $commands->{$lastCmd}->($hash, $buf);
     } else {
