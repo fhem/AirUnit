@@ -47,6 +47,8 @@ BEGIN {
 		InternalVal
 		InternalTimer
 		RemoveInternalTimer
+		TimeNow
+		time_str2num
         Value
     ));
 };
@@ -57,7 +59,7 @@ GP_Export(
     )
 );
 
-my $Version = '0.0.5.6 - Apr 2021';
+my $Version = '0.0.5.7 - Sep 2021';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
@@ -285,7 +287,7 @@ sub Set() {
 	elsif ($cmd eq 'Luefterstufe') {
 		Log3($name, 3, "set $name $cmd $val");
 		my $myMode = ReadingsVal($name, "Modus" , "");
-		Log3($name, 3, "ReadingsVal: $myMode");
+		Log3($name, 3, "Modus: $myMode");
 		if (($val <= 10 || $val >= 1) and $myMode eq "Manuell"){
 			@w_settings = (@W_FAN_STEP, $val);
 			DoChange($hash, \@w_settings, \@FAN_STEP);
@@ -474,8 +476,16 @@ sub GetUpdate() {
 sub DoUpdate(){
     my ($hash) = @_;
     my $name = $hash->{NAME};
+	my $lastCmdTs = $hash->{LastCommandTS};
     my $queueRef = $hash->{helper}{commandQueue};
     my $orgQueueCount = @$queueRef;
+	
+	my $elapsedTime = int(gettimeofday() - time_str2num($lastCmdTs));
+	if($orgQueueCount > 0 && $elapsedTime > $hash->{INTERVAL} * 2) {
+		Log3($name, 3, "AirUnit ($name) - reset command queue, timeout after $elapsedTime seconds");
+		$queueRef = [];
+		$orgQueueCount = 0;
+	}
 
     # Update readings
  
@@ -894,6 +904,7 @@ sub sendNextRequest(){
     ::DevIo_SimpleWrite( $hash, $data, 0 );
 
     $hash->{LastCommand} = $unpackedData;
+	$hash->{LastCommandTS} = TimeNow();
 
     return;
 }
