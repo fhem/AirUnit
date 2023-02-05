@@ -688,7 +688,12 @@ sub getTemperatur() {
 
     my $tempresponse = unpack("H*" , substr($data,0,2));
     Log3($name, 5, "recvunpackData in getTemperatur(): $tempresponse\n");
-    my $temperature = hex($tempresponse);
+
+	# handle negative values
+    my $temperature = unpack('s', pack('S', hex($tempresponse)));
+	# handle invalid value
+	return 'NaN' if ($temperature == -32768);
+
     return sprintf ('%.02f', $temperature/100);
 }
 
