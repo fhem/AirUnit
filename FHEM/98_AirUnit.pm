@@ -59,7 +59,7 @@ GP_Export(
     )
 );
 
-my $Version = '0.0.5.7 - Sep 2021';
+my $Version = '0.0.5.8 - Feb 2023';
 
 ####################### GET Paramter ################################################  
 # Das sind die Zahlen die gesendet werden müssen, damit man die Informationen erhält.
