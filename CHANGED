@@ -1,10 +1,12 @@
 2023-07-16 - version 0.0.5.9
 2023-04-08 - log device name with every message
+2023-03-12 - Update update.yml
 2023-02-05 - version 0.0.5.8
 2023-02-05 - access fhem-controls-actions@main
 2021-09-11 - version 0.0.5.7
 
 reset command queue
+2021-04-10 - Automatic updated controls and CHANGED
 2021-04-05 - version 0.0.5.6
 
 fix ONOFF value handling
