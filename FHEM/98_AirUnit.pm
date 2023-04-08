@@ -223,17 +223,17 @@ sub Read()
     # stop processing if no data is available (device disconnected)
     return if(!defined($buf));
     
-    Log3($name, 4, "AirUnit ($name) - received: ".unpack('H*', $buf));
+    Log3($name, 4, "AirUnit $name: received: ".unpack('H*', $buf));
 
     my $lastCmd = InternalVal($name, 'LastCommand', '');
     
 	if ($lastCmd =~ /0106.*/xms && $buf =~ /\x00{63}/xms) {
 		# received answer from Set command
-        Log3($name, 4, "AirUnit ($name) - command performed: $lastCmd");
+        Log3($name, 4, "AirUnit $name: command performed: $lastCmd");
 	} elsif (defined($commands->{$lastCmd})) {
         $commands->{$lastCmd}->($hash, $buf);
     } else {
-        Log3($name, 4, "AirUnit ($name) - handling of command not defined: $lastCmd");
+        Log3($name, 4, "AirUnit $name: handling of command not defined: $lastCmd");
     }
 
     sendNextRequest($hash);
@@ -247,7 +247,7 @@ sub Get() {
     my ($hash, $name, $cmd, @val) = @_;
 	
 	if ($cmd ne '?' && AttrVal($name, 'disable', 0) == 1) {
-		Log3($name, 3, "$name is disabled, ignore : get $name $cmd");
+		Log3($name, 3, "AirUnit $name: disabled, ignore : get $name $cmd");
 		return;
     } elsif($cmd eq 'update') {
         DoUpdate($hash);
@@ -266,10 +266,10 @@ sub Set() {
     my @w_settings;
 
 	if ($cmd ne '?' && AttrVal($name, 'disable', 0) == 1) {
-		Log3($name, 3, "$name is disabled, ignore : set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: disabled, ignore : set $name $cmd $val");
 		return;
 	} elsif($cmd eq 'Modus') {
-      Log3($name, 3, "set $name $cmd $val");
+      Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val eq "Bedarfsmodus"){
 			@w_settings = (@W_MODE, 0x00);
 		}elsif($val eq "Programm"){
@@ -285,9 +285,9 @@ sub Set() {
 		return;
 	}
 	elsif ($cmd eq 'Luefterstufe') {
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		my $myMode = ReadingsVal($name, "Modus" , "");
-		Log3($name, 3, "Modus: $myMode");
+		Log3($name, 3, "AirUnit $name: Modus: $myMode");
 		if (($val <= 10 || $val >= 1) and $myMode eq "Manuell"){
 			@w_settings = (@W_FAN_STEP, $val);
 			DoChange($hash, \@w_settings, \@FAN_STEP);
@@ -297,7 +297,7 @@ sub Set() {
 		return;
 	}
     elsif ($cmd eq 'Stosslueftung'){
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_BOOST, 0x01);
 		}elsif($val eq "off"){
@@ -309,7 +309,7 @@ sub Set() {
 		return;
 		}
 	elsif ($cmd eq 'Bypass'){
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_BYPASS, 0x01);
 		}elsif($val eq "off"){
@@ -321,7 +321,7 @@ sub Set() {
 		return;
 	}
 	elsif ($cmd eq 'Nachtkuehlung'){
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_NIGHTCOOLING, 0x01);
 		}elsif($val eq "off"){
@@ -333,7 +333,7 @@ sub Set() {
 		return;
 	}
 	elsif ($cmd eq 'Feuerstaette'){
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_FIREPLACE, 0x01);
 		}elsif($val eq "off"){
@@ -345,7 +345,7 @@ sub Set() {
 		return;
 	}
 	# elsif ($cmd eq 'Dunstabzugshaube'){
-		# Log3($name, 3, "set $name $cmd $val");
+		# Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		# if($val eq "on"){
 			# @w_settings = (@W_COOKERHOOD, 0x01);
 		# }elsif($val eq "off"){
@@ -358,7 +358,7 @@ sub Set() {
 		# return undef;
 	# }
 	elsif ($cmd eq 'automatische_Stosslueftung'){
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_DISABLE_BOOST_AUTOMATIC, 0x00);
 		}elsif($val eq "off"){
@@ -370,7 +370,7 @@ sub Set() {
 		return;
 	}
 	elsif ($cmd eq 'automatischer_Bypass'){
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val eq "on"){
 			@w_settings = (@W_DISABLE_BYPASS_AUTOMATIC, 0x00);
 		}elsif($val eq "off"){
@@ -382,7 +382,7 @@ sub Set() {
 		return;
 	}
 	elsif ($cmd eq 'Stosslueftung_Dauer'){
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val <= 23 || $val >= 1){
 			@w_settings = (@W_BOOST_DURATION, $val);
 		}else {
@@ -392,7 +392,7 @@ sub Set() {
 		return;
 	}
 	elsif ($cmd eq 'Bypass_Dauer'){
-		Log3($name, 3, "set $name $cmd $val");
+		Log3($name, 3, "AirUnit $name: set $name $cmd $val");
 		if($val <= 23 || $val >= 1){
 			@w_settings = (@W_BYPASS_DURATION, $val);
 		}else {
@@ -402,7 +402,7 @@ sub Set() {
 		return;
 	}
 	elsif($cmd eq 'Intervall' && defined($val) ) {
-      Log3($name, 3, "set $name $cmd $val");
+      Log3($name, 3, "AirUnit $name: set $name $cmd $val");
       $val = 30 if( $val < 30 );
       $hash->{INTERVAL} = $val;
       return "Intervall wurde auf $val Sekunden gesetzt.";
@@ -482,7 +482,7 @@ sub DoUpdate(){
 	
 	my $elapsedTime = int(gettimeofday() - time_str2num($lastCmdTs));
 	if($orgQueueCount > 0 && $elapsedTime > $hash->{INTERVAL} * 2) {
-		Log3($name, 3, "AirUnit ($name) - reset command queue, timeout after $elapsedTime seconds");
+		Log3($name, 3, "AirUnit $name: reset command queue, timeout after $elapsedTime seconds");
 		$queueRef = [];
 		$orgQueueCount = 0;
 	}
@@ -687,7 +687,7 @@ sub getTemperatur() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,2));
-    Log3($name, 5, "recvunpackData in getTemperatur(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getTemperatur(): $tempresponse\n");
 
 	# handle negative values
     my $temperature = unpack('s', pack('S', hex($tempresponse)));
@@ -703,7 +703,7 @@ sub getHumidity() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,1));
-    Log3($name, 5, "recvunpackData in getHumidity(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getHumidity(): $tempresponse\n");
     my $humidity = hex($tempresponse) * 100 / 255;
     return sprintf ('%.02f', $humidity);
 }
@@ -714,7 +714,7 @@ sub getAirInputOutput() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,1));
-    Log3($name, 5, "recvunpackData in getAirInputOutput(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getAirInputOutput(): $tempresponse\n");
     my $inputoutput = hex($tempresponse);
     return $inputoutput;
 }
@@ -725,7 +725,7 @@ sub getBatteryLifeTime() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,1));
-    Log3($name, 5, "recvunpackData in getBatteryLifeTime(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getBatteryLifeTime(): $tempresponse\n");
     my $batterylifetime = hex($tempresponse);
     return sprintf ('%.02f', $batterylifetime);
 }
@@ -736,7 +736,7 @@ sub getFilterLifeTime() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,1));
-    Log3($name, 5, "recvunpackData in getFilterLifeTime(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getFilterLifeTime(): $tempresponse\n");
     my $filterlifetime = hex($tempresponse) * 100 / 255;
     return sprintf ('%.02f', $filterlifetime);
 }
@@ -747,7 +747,7 @@ sub getONOFF() {
 	my $name = $hash->{NAME};
 
 	my $onoff = hex(unpack("H*" , substr($data,0,1)));
-	Log3($name, 5, "recvunpackData in getONOFF(): $onoff\n");
+	Log3($name, 5, "AirUnit $name: recvunpackData in getONOFF(): $onoff\n");
 	if($onoff == 1){
 		return "An"
 	}elsif($onoff == 0){
@@ -755,7 +755,7 @@ sub getONOFF() {
 	}elsif($onoff == 255){  #für aktueller Status des Bypasses (aktiv)
 		return "An"
 	}else {
-		Log3($name, 1,  "Unbekannter Paramter in getONOFF(): $onoff\n");
+		Log3($name, 1,  "AirUnit $name: Unbekannter Paramter in getONOFF(): $onoff\n");
 	}
 
 	return;
@@ -767,13 +767,13 @@ sub getOFFON() {
 	my $name = $hash->{NAME};
 
 	my $offon = hex(unpack("H*" , substr($data,0,1)));
-	Log3($name, 5, "recvunpackData in getOFFON(): $offon\n");
+	Log3($name, 5, "AirUnit $name: recvunpackData in getOFFON(): $offon\n");
 	if($offon == 0){
 		return "An"
 	}elsif($offon == 1){
 		return "Aus"
 	}else {
-		Log3($name, 1,  "Unbekannter Paramter in getOFFON(): $offon\n");
+		Log3($name, 1,  "AirUnit $name: Unbekannter Paramter in getOFFON(): $offon\n");
 	}
 
 	return;
@@ -785,7 +785,7 @@ sub getFanSpeedInRPM() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,2));
-    Log3($name, 5, "recvunpackData in getFanSpeedInRPM(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getFanSpeedInRPM(): $tempresponse\n");
     my $fanspeedinrpm = hex($tempresponse);
     return $fanspeedinrpm;
 }
@@ -796,7 +796,7 @@ sub getFanSpeed() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,1));
-    Log3($name, 5, "recvunpackData in getFanspeed(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getFanspeed(): $tempresponse\n");
     my $fanspeed = hex($tempresponse);
     return $fanspeed;
 }
@@ -807,7 +807,7 @@ sub getModel() {
     my $name = $hash->{NAME};
 
 	my $model = unpack("A*" , substr($data,1));
-	Log3($name, 5, "recvunpackData in getModel(): $model\n");
+	Log3($name, 5, "AirUnit $name: recvunpackData in getModel(): $model\n");
 	return $model;
 }
 
@@ -817,7 +817,7 @@ sub getMode() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,1));
-    Log3($name, 5, "recvunpackData in getMode(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getMode(): $tempresponse\n");
     my $getmode = hex($tempresponse);
     if($getmode == 0){
         return "Bedarfsmodus"
@@ -828,7 +828,7 @@ sub getMode() {
     }elsif($getmode == 3){
         return "Aus"
     }else {
-        Log3($name, 1,  "Unbekannter Antwortparamter in getMode(): $getmode\n");
+        Log3($name, 1, "AirUnit $name: Unbekannter Antwortparamter in getMode(): $getmode\n");
     }
     return;
 }
@@ -839,7 +839,7 @@ sub getModelSN() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*" , substr($data,0,2));
-    Log3($name, 5, "recvunpackData in getModelSN(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getModelSN(): $tempresponse\n");
     my $modelsn = hex($tempresponse);
     return $modelsn;
 }
@@ -850,7 +850,7 @@ sub getDurationTime() {
     my $name = $hash->{NAME};
 	
     my $tempresponse = unpack("H*" , substr($data,0,1));
-	Log3($name, 5, "recvunpackData in getDurationTime(): $tempresponse\n");
+	Log3($name, 5, "AirUnit $name: recvunpackData in getDurationTime(): $tempresponse\n");
     my $getduration = hex($tempresponse);
 	return $getduration;
 }
@@ -861,7 +861,7 @@ sub getOperationTime() {
     my $name = $hash->{NAME};
 
     my $tempresponse = unpack("H*", substr($data,0,4));
-    Log3($name, 5, "recvunpackData in getOperationTime(): $tempresponse\n");
+    Log3($name, 5, "AirUnit $name: recvunpackData in getOperationTime(): $tempresponse\n");
 	my $operationtime = hex($tempresponse) / 60;
 	return sprintf ('%.01f', $operationtime);
 }
@@ -883,7 +883,7 @@ sub sendNextRequest(){
 
     # create a log entry with the error message
     if ($error) {
-        Log3($name, 5, "AirUnit ($name) - error while connecting: $error");
+        Log3($name, 5, "AirUnit $name: error while connecting: $error");
 		return;
     }
  
@@ -905,7 +905,7 @@ sub sendNextRequest(){
     my $data = pack('C*' x @nextCmd, @nextCmd);
     my $unpackedData = unpack('H*', $data);
 
-    Log3($name, 4, "sendData in sendRequest(): $unpackedData");
+    Log3($name, 4, "AirUnit $name: sendData in sendRequest(): $unpackedData");
     ::DevIo_SimpleWrite( $hash, $data, 0 );
 
     $hash->{LastCommand} = $unpackedData;
