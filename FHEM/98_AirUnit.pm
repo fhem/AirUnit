@@ -1,3 +1,4 @@
+# $Id: 98_AirUnit.pm 27775 2023-07-16 17:51:09Z vuffiraa $
 ##############################################################################
 #
 #     98_AirUnit.pm
@@ -917,6 +918,7 @@ sub sendNextRequest(){
 1;
 
 =pod
+=item summary controls Danfoss AirUnits (a1,a2,w1,w2)
 =begin html
 
 <a name="AirUnit"></a>
@@ -1069,18 +1071,18 @@ sub sendNextRequest(){
 						<i>"Bedarfsmodus"</i>, for automatic mode<br>
 						<i>"Programm"</i>, you can define a programm in your AirDail-Controller and choose one.<br>
 						<i>"Manuell"</i>, you can set the steps for the fans manually (only in manual mode). Bypass and Boost are in automatic mode.<br>
-						<i>"Aus"</i>, the system is off for 24 hours, after this time, the system starts in automatic mode with fanstep 1.
+						<i>"Aus"</i>, the system is off for 24 hours, after this time, the system starts in automatic mode with fanstep 1.</li>
 				<li><i>Luefterstufe</i><br>
                   You can set the steps for the fans manually. (only in manual mode)</li>
 				<li><i>Stosslueftung</i><br>
                   You can activate/deactive the Boost-Option of your ventilation system. You can configure this mode in your AirDail-Controller, the standard fanstep 10 for 3 hours.<br>
                   It is useful if you need more Air e.g. in case of cooking or a party with more people.</li>
 				<li><i>Stosslueftung_Dauer</i><br>
-				  You can set the hours for the duration of Boost-Option manually.</l
+				  You can set the hours for the duration of Boost-Option manually.</li>
                 <li><i>Bypass</i><br>
                   You can activate/deactive the Bypass-Option of you ventilations systems. Its a cooling function, the heat exchanger will be deactivated.<br>
 				  You can configure this mode in your AirDail-Controller, the standard time is 3 hours.<br>
-				  <b>You can´t activte it, if the outdoor temperature is under 5°C.<br>
+				  <b>You can't activte it, if the outdoor temperature is under 5°C.<br>
 				  This option is not available for w1-unit.</b></li>
 				<li><i>Bypass_Dauer</i><br>
 				  You can set the hours for the duration of Bypass-Option manually.</li>
